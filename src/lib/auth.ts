@@ -12,6 +12,10 @@ class EmailNotVerifiedError extends CredentialsSignin {
   code = "email_not_verified";
 }
 
+class AccountDeactivatedError extends CredentialsSignin {
+  code = "account_deactivated";
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
@@ -43,6 +47,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!user || !passwordMatches) {
           throw new InvalidCredentialsError();
+        }
+
+        if (!user.isActive) {
+          throw new AccountDeactivatedError();
         }
 
         if (!user.emailVerified) {

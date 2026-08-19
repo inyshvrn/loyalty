@@ -8,22 +8,32 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  countTotalCustomers,
+  countStampsToday,
+  countConfirmedClaimsThisMonth,
+  countEligibleCustomers,
+  getRecentActivity,
+} from "@/lib/loyalty";
+import { formatRelativeIndonesian } from "@/lib/format";
 
-const stats = [
-  { label: "Total Pelanggan", value: 312 },
-  { label: "Stempel Hari Ini", value: 18 },
-  { label: "Reward Bulan Ini", value: 24 },
-  { label: "Siap Klaim", value: 5, accent: true },
-];
+export default async function AdminDashboardPage() {
+  const [totalCustomers, stampsToday, claimsThisMonth, eligibleCount, activity] =
+    await Promise.all([
+      countTotalCustomers(),
+      countStampsToday(),
+      countConfirmedClaimsThisMonth(),
+      countEligibleCustomers(),
+      getRecentActivity(10),
+    ]);
 
-const activity = [
-  { name: "Sarah Wijaya", action: "+1 stempel", status: "6/10", variant: "secondary" as const },
-  { name: "Budi Santoso", action: "Reward diklaim", status: "Diklaim", variant: "default" as const },
-  { name: "Nadia Putri", action: "+1 stempel", status: "3/10", variant: "secondary" as const },
-  { name: "Andi Pratama", action: "+1 stempel", status: "10/10", variant: "default" as const },
-];
+  const stats = [
+    { label: "Total Pelanggan", value: totalCustomers },
+    { label: "Stempel Hari Ini", value: stampsToday },
+    { label: "Reward Bulan Ini", value: claimsThisMonth },
+    { label: "Siap Klaim", value: eligibleCount, accent: eligibleCount > 0 },
+  ];
 
-export default function AdminDashboardPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-10">
       <h1 className="mb-5 text-xl font-bold text-foreground">
@@ -39,32 +49,44 @@ export default function AdminDashboardPage() {
       <h2 className="mb-3 text-sm font-semibold text-foreground">
         Aktivitas Terbaru
       </h2>
-      <div className="overflow-x-auto rounded-xl border border-border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Pelanggan</TableHead>
-              <TableHead>Aktivitas</TableHead>
-              <TableHead className="text-right">Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {activity.map((row, i) => (
-              <TableRow key={i}>
-                <TableCell className="font-medium text-foreground">
-                  {row.name}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {row.action}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Badge variant={row.variant}>{row.status}</Badge>
-                </TableCell>
+      {activity.length === 0 ? (
+        <div className="rounded-xl border border-border px-4 py-10 text-center text-sm text-muted-foreground">
+          Belum ada aktivitas.
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Pelanggan</TableHead>
+                <TableHead>Aktivitas</TableHead>
+                <TableHead className="text-right">Waktu</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {activity.map((entry) => (
+                <TableRow key={`${entry.type}-${entry.id}`}>
+                  <TableCell className="font-medium text-foreground">
+                    {entry.customerName}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {entry.type === "stamp" ? (
+                      "+1 stempel"
+                    ) : entry.status === "CANCELLED" ? (
+                      <Badge variant="outline">Klaim dibatalkan</Badge>
+                    ) : (
+                      <Badge variant="secondary">Reward diklaim</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {formatRelativeIndonesian(entry.at)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }

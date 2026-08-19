@@ -33,14 +33,22 @@ export type CustomerProgress = {
   lastClaimAt: Date | null;
 };
 
-/** Current stamp progress — derived from Stamp rows since the last confirmed claim. */
-export async function getCustomerProgress(customerId: string): Promise<CustomerProgress> {
-  const [threshold, lastClaimAt] = await Promise.all([
-    getStampThreshold(),
-    getLastConfirmedClaimAt(customerId),
-  ]);
+/** Same as getCustomerProgress, but reuses an already-fetched threshold —
+ * useful when computing progress for many customers at once (admin pages)
+ * so the singleton LoyaltySetting isn't re-queried per customer. */
+export async function getCustomerProgressWithThreshold(
+  customerId: string,
+  threshold: number
+): Promise<CustomerProgress> {
+  const lastClaimAt = await getLastConfirmedClaimAt(customerId);
   const stamps = await getStampCountSince(customerId, lastClaimAt);
   return { stamps, threshold, eligible: stamps >= threshold, lastClaimAt };
+}
+
+/** Current stamp progress — derived from Stamp rows since the last confirmed claim. */
+export async function getCustomerProgress(customerId: string): Promise<CustomerProgress> {
+  const threshold = await getStampThreshold();
+  return getCustomerProgressWithThreshold(customerId, threshold);
 }
 
 export async function getStampedTodayAt(customerId: string): Promise<Date | null> {
@@ -66,4 +74,81 @@ export function getRecentClaims(customerId: string, limit = 10) {
     orderBy: { claimedAt: "desc" },
     take: limit,
   });
+}
+
+// ---- Admin-facing aggregates ----
+
+export function countTotalCustomers() {
+  return prisma.user.count({ where: { role: "CUSTOMER" } });
+}
+
+export async function countStampsToday() {
+  const { start, end } = getStoreDayBounds();
+  return prisma.stamp.count({ where: { createdAt: { gte: start, lt: end } } });
+}
+
+export async function countConfirmedClaimsThisMonth() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  return prisma.rewardClaim.count({
+    where: { status: "CONFIRMED", claimedAt: { gte: start, lt: end } },
+  });
+}
+
+/** Loops all customers to check eligibility — fine at this app's scale (a
+ * single coffee shop's customer list), and simpler/more correct than trying
+ * to express a per-customer "since last claim" cutoff in one aggregate query. */
+export async function countEligibleCustomers() {
+  const [threshold, customers] = await Promise.all([
+    getStampThreshold(),
+    prisma.user.findMany({ where: { role: "CUSTOMER" }, select: { id: true } }),
+  ]);
+  const results = await Promise.all(
+    customers.map((c) => getCustomerProgressWithThreshold(c.id, threshold))
+  );
+  return results.filter((r) => r.eligible).length;
+}
+
+export type ActivityEntry =
+  | { type: "stamp"; id: string; customerName: string; at: Date }
+  | {
+      type: "claim";
+      id: string;
+      customerName: string;
+      at: Date;
+      status: "CONFIRMED" | "CANCELLED";
+    };
+
+export async function getRecentActivity(limit = 10): Promise<ActivityEntry[]> {
+  const [stamps, claims] = await Promise.all([
+    prisma.stamp.findMany({
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      include: { customer: { select: { name: true } } },
+    }),
+    prisma.rewardClaim.findMany({
+      orderBy: { claimedAt: "desc" },
+      take: limit,
+      include: { customer: { select: { name: true } } },
+    }),
+  ]);
+
+  const entries: ActivityEntry[] = [
+    ...stamps.map((s) => ({
+      type: "stamp" as const,
+      id: s.id,
+      customerName: s.customer.name,
+      at: s.createdAt,
+    })),
+    ...claims.map((c) => ({
+      type: "claim" as const,
+      id: c.id,
+      customerName: c.customer.name,
+      at: c.claimedAt,
+      status: c.status,
+    })),
+  ];
+
+  return entries.sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, limit);
 }

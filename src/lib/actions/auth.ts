@@ -137,6 +137,11 @@ export async function loginAction(
             "Email belum diverifikasi. Periksa kotak masuk Anda atau kirim ulang tautan verifikasi.",
         };
       }
+      if (error.code === "account_deactivated") {
+        return {
+          error: "Akun ini sudah dinonaktifkan. Hubungi admin jika ini keliru.",
+        };
+      }
       return { error: "Email atau kata sandi salah." };
     }
     throw error;
