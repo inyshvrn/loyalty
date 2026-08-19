@@ -13,7 +13,7 @@ See `docs/product-requirements.md` for the full spec, `docs/technical-architectu
 
 ## Status
 
-In development — Milestone 3 (Authentication) complete. See `docs/roadmap.md` for the full milestone plan and `CLAUDE.md` for the current state.
+In development — Milestones 1–7 complete (through manual testing of core flows). See `docs/roadmap.md` for the full milestone plan and `CLAUDE.md` for the current state.
 
 ## Stack
 
@@ -32,3 +32,8 @@ npm run dev
 Copy `.env.example` to `.env` first and fill in `AUTH_SECRET` at minimum
 (`RESEND_API_KEY` can stay blank locally — see below). Auth setup and local
 testing steps: `docs/authentication.md`.
+
+**If you see `ECONNREFUSED` errors**, the local `npx prisma dev` server has
+stopped (it can idle out on its own after a while) — just run
+`npx prisma dev` again to restart it; it reuses the same connection string
+and data. This is a local-only dev tool quirk, not an app issue.

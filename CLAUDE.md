@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-In development. Milestones 1–3 (Project Setup, UI Foundation, Authentication) are complete per `docs/roadmap.md`. Authentication setup and local testing steps: `docs/authentication.md`. Next up: Milestone 4 (Database & Core Data Model — `Stamp`, `RewardClaim`, `LoyaltySetting`).
+In development. Milestones 1–7 are complete per `docs/roadmap.md` (setup, UI, auth, data model, loyalty flow, admin panel, manual testing pass). Authentication setup and local testing steps: `docs/authentication.md`. Next up: Milestone 8 (Deployment).
 
 ## Project summary
 
@@ -29,11 +29,11 @@ Full requirements: `docs/product-requirements.md`. Architecture and data model: 
 - `npm run db:seed` — seed dev barista/admin accounts (see `docs/authentication.md`).
 - `npx prisma dev` — start a local Postgres instance if not using a hosted `DATABASE_URL`.
 
-No testing framework has been chosen yet (Milestone 7 is currently planned as manual testing of core flows).
+No automated testing framework is in use — Milestone 7 was a manual/live-browser testing pass across roles and edge cases (see commit history), not a checked-in test suite.
 
 ## Architecture notes for future work
 
-- Three roles share one login form; redirect after auth is role-based (customer / barista / admin), enforced via `middleware.ts`.
+- Three roles share one login form; redirect after auth is role-based (customer / barista / admin), enforced via `src/proxy.ts` (Next.js 16 renamed Middleware to Proxy).
 - Business rule: 1 scan = 1 stamp, max 1 stamp per customer per day.
 - On reaching the configurable threshold N, the customer becomes "eligible"; a barista must explicitly confirm the reward was given before the stamp count resets to 0. Every claim is logged (history is never deleted), and admins can manually adjust a stamp count or cancel a claim to correct barista mistakes.
 - Deferred to a later phase (do not build unless asked): importing historical purchase data from CSV/XLSX, per-item purchase tracking / deeper CRM, automated WhatsApp/email notifications, multi-outlet support.
