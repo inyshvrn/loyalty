@@ -1,18 +1,19 @@
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { getRecentStamps, getRecentClaims } from "@/lib/loyalty";
+import { formatRelativeIndonesian } from "@/lib/format";
 
-const visits = [
-  { date: "Hari ini, 10:24" },
-  { date: "3 hari lalu" },
-  { date: "6 hari lalu" },
-  { date: "2 minggu lalu" },
-  { date: "3 minggu lalu" },
-  { date: "1 bulan lalu" },
-];
+export default async function HistoryPage() {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
 
-const claims = [{ date: "2 bulan lalu", note: "Reward diklaim oleh barista" }];
+  const [visits, claims] = await Promise.all([
+    getRecentStamps(session.user.id, 50),
+    getRecentClaims(session.user.id, 50),
+  ]);
 
-export default function HistoryPage() {
   return (
     <div className="mx-auto max-w-md px-4 py-6 md:max-w-lg md:px-8 md:py-10">
       <h1 className="mb-4 text-xl font-bold text-foreground">Riwayat</h1>
@@ -24,30 +25,50 @@ export default function HistoryPage() {
         </TabsList>
 
         <TabsContent value="visits" className="mt-4">
-          <Card className="divide-y divide-border p-0">
-            {visits.map((visit, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between px-4 py-3 text-sm"
-              >
-                <span className="text-muted-foreground">{visit.date}</span>
-                <span className="font-medium text-foreground">
-                  +1 stempel
-                </span>
-              </div>
-            ))}
-          </Card>
+          {visits.length === 0 ? (
+            <Card className="px-4 py-6 text-center text-sm text-muted-foreground">
+              Belum ada kunjungan.
+            </Card>
+          ) : (
+            <Card className="divide-y divide-border p-0">
+              {visits.map((visit) => (
+                <div
+                  key={visit.id}
+                  className="flex items-center justify-between px-4 py-3 text-sm"
+                >
+                  <span className="text-muted-foreground">
+                    {formatRelativeIndonesian(visit.createdAt)}
+                  </span>
+                  <span className="font-medium text-foreground">
+                    +1 stempel
+                  </span>
+                </div>
+              ))}
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="claims" className="mt-4">
-          <Card className="divide-y divide-border p-0">
-            {claims.map((claim, i) => (
-              <div key={i} className="px-4 py-3 text-sm">
-                <p className="font-medium text-foreground">{claim.note}</p>
-                <p className="text-xs text-muted-foreground">{claim.date}</p>
-              </div>
-            ))}
-          </Card>
+          {claims.length === 0 ? (
+            <Card className="px-4 py-6 text-center text-sm text-muted-foreground">
+              Belum ada reward yang diklaim.
+            </Card>
+          ) : (
+            <Card className="divide-y divide-border p-0">
+              {claims.map((claim) => (
+                <div key={claim.id} className="px-4 py-3 text-sm">
+                  <p className="font-medium text-foreground">
+                    {claim.status === "CANCELLED"
+                      ? "Klaim dibatalkan admin"
+                      : "Reward diklaim oleh barista"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatRelativeIndonesian(claim.claimedAt)}
+                  </p>
+                </div>
+              ))}
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>

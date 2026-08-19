@@ -37,6 +37,13 @@ async function main() {
     Role.BARISTA
   );
 
+  await prisma.loyaltySetting.upsert({
+    where: { id: 1 },
+    update: {},
+    create: { id: 1, stampThreshold: 10 },
+  });
+  console.log("Seeded LoyaltySetting: stampThreshold = 10");
+
   console.log(
     "\nDev credentials (change these — see docs/authentication.md):"
   );
