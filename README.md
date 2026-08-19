@@ -13,7 +13,7 @@ See `docs/product-requirements.md` for the full spec, `docs/technical-architectu
 
 ## Status
 
-Planning complete, not yet scaffolded. See `CLAUDE.md` for the current state and stack.
+In development — Milestone 3 (Authentication) complete. See `docs/roadmap.md` for the full milestone plan and `CLAUDE.md` for the current state.
 
 ## Stack
 
@@ -21,4 +21,14 @@ Next.js (App Router, TypeScript) · Prisma + PostgreSQL · NextAuth.js + Resend 
 
 ## Setup
 
-To be documented once the project is scaffolded (Milestone 1).
+```bash
+npm install
+npx prisma dev          # local Postgres (or set DATABASE_URL to a real one)
+npx prisma migrate dev
+npm run db:seed         # creates dev barista/admin accounts
+npm run dev
+```
+
+Copy `.env.example` to `.env` first and fill in `AUTH_SECRET` at minimum
+(`RESEND_API_KEY` can stay blank locally — see below). Auth setup and local
+testing steps: `docs/authentication.md`.

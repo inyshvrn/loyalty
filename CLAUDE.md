@@ -4,9 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-The stack and specification have been decided (see `docs/`), but the codebase has not been scaffolded yet — Milestone 1 (Project Setup) in `docs/roadmap.md` has not been executed. There is no `package.json`, no source tree, and no build/lint/test commands to run yet.
-
-**Do not start implementing features.** Wait for the user to explicitly say to begin development (e.g. "mulai development"). Planning and documentation are considered done; scaffolding and coding are a separate, explicitly-gated step.
+In development. Milestones 1–3 (Project Setup, UI Foundation, Authentication) are complete per `docs/roadmap.md`. Authentication setup and local testing steps: `docs/authentication.md`. Next up: Milestone 4 (Database & Core Data Model — `Stamp`, `RewardClaim`, `LoyaltySetting`).
 
 ## Project summary
 
@@ -25,7 +23,13 @@ Full requirements: `docs/product-requirements.md`. Architecture and data model: 
 
 ## Commands
 
-Not applicable yet — to be filled in once Milestone 1 (Project Setup) scaffolds the Next.js project. Expected to include the standard `npm run dev` / `build` / `lint`, plus `npx prisma migrate dev` / `npx prisma studio` for the database. No testing framework has been chosen yet (Milestone 7 is currently planned as manual testing of core flows).
+- `npm run dev` / `build` / `lint` — standard Next.js commands.
+- `npx prisma migrate dev` — apply schema changes locally.
+- `npx prisma studio` — browse/edit the database.
+- `npm run db:seed` — seed dev barista/admin accounts (see `docs/authentication.md`).
+- `npx prisma dev` — start a local Postgres instance if not using a hosted `DATABASE_URL`.
+
+No testing framework has been chosen yet (Milestone 7 is currently planned as manual testing of core flows).
 
 ## Architecture notes for future work
 

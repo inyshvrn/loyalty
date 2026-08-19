@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { LoginForm } from "@/components/auth/login-form";
 
 export default function LoginPage() {
   return (
@@ -14,17 +12,7 @@ export default function LoginPage() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="nama@email.com" />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="password">Kata sandi</Label>
-          <Input id="password" type="password" placeholder="••••••••" />
-        </div>
-        <Button className="mt-1" type="button">
-          Masuk
-        </Button>
+        <LoginForm />
         <p className="text-center text-[13px] text-muted-foreground">
           Belum punya akun?{" "}
           <Link href="/register" className="font-semibold text-foreground underline-offset-4 hover:underline">

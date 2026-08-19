@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandMark } from "@/components/brand-mark";
+import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "@/lib/nav-config";
 
 export function SidebarNav({
   items,
   subtitle,
+  user,
 }: {
   items: NavItem[];
   subtitle: string;
+  user?: { name: string; email: string };
 }) {
   const pathname = usePathname();
 
@@ -44,6 +47,11 @@ export function SidebarNav({
           );
         })}
       </nav>
+      {user && (
+        <div className="mt-auto border-t border-border px-2 pt-3">
+          <UserMenu name={user.name} email={user.email} />
+        </div>
+      )}
     </aside>
   );
 }

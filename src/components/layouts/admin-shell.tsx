@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
+import { UserMenu } from "@/components/user-menu";
 import { SidebarNav } from "@/components/layouts/sidebar-nav";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,26 +47,35 @@ function DrawerNav() {
   );
 }
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+export function AdminShell({
+  user,
+  children,
+}: {
+  user: { name: string; email: string };
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex min-h-svh bg-background">
-      <SidebarNav items={adminNav} subtitle="Admin" />
+      <SidebarNav items={adminNav} subtitle="Admin" user={user} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-border px-4 py-3 md:hidden">
+        <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 md:hidden">
           <BrandMark />
-          <Sheet>
-            <SheetTrigger render={<Button variant="ghost" size="icon" />}>
-              <Menu className="size-5" />
-              <span className="sr-only">Buka menu</span>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-72">
-              <SheetHeader>
-                <BrandMark />
-                <SheetTitle className="sr-only">Menu navigasi admin</SheetTitle>
-              </SheetHeader>
-              <DrawerNav />
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <UserMenu name={user.name} email={user.email} />
+            <Sheet>
+              <SheetTrigger render={<Button variant="ghost" size="icon" />}>
+                <Menu className="size-5" />
+                <span className="sr-only">Buka menu</span>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72">
+                <SheetHeader>
+                  <BrandMark />
+                  <SheetTitle className="sr-only">Menu navigasi admin</SheetTitle>
+                </SheetHeader>
+                <DrawerNav />
+              </SheetContent>
+            </Sheet>
+          </div>
         </header>
         <main className="flex-1">{children}</main>
       </div>
