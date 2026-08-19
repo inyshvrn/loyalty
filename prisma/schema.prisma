@@ -27,4 +27,54 @@ model User {
   passwordHash  String
   role          Role     @default(CUSTOMER)
   createdAt     DateTime @default(now())
+
+  stampsReceived  Stamp[]       @relation("CustomerStamps")
+  stampsScanned   Stamp[]       @relation("BaristaScannedStamps")
+  claimsReceived  RewardClaim[] @relation("CustomerClaims")
+  claimsConfirmed RewardClaim[] @relation("BaristaConfirmedClaims")
+  claimsCancelled RewardClaim[] @relation("AdminCancelledClaims")
+}
+
+/// One row per QR scan. Current progress toward the threshold is derived —
+/// count of a customer's Stamp rows since their last RewardClaim (or since
+/// registration if none yet) — not stored directly.
+model Stamp {
+  id                 String   @id @default(cuid())
+  customerId         String
+  customer           User     @relation("CustomerStamps", fields: [customerId], references: [id])
+  scannedByBaristaId String
+  scannedByBarista   User     @relation("BaristaScannedStamps", fields: [scannedByBaristaId], references: [id])
+  createdAt          DateTime @default(now())
+
+  @@index([customerId])
+}
+
+enum RewardClaimStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+/// Written when a barista confirms a reward hand-off; this is what resets a
+/// customer's stamp progress. Never hard-deleted — an admin can only cancel
+/// a mistaken claim via status, so history stays permanent.
+model RewardClaim {
+  id                   String            @id @default(cuid())
+  customerId           String
+  customer             User              @relation("CustomerClaims", fields: [customerId], references: [id])
+  confirmedByBaristaId String
+  confirmedByBarista   User              @relation("BaristaConfirmedClaims", fields: [confirmedByBaristaId], references: [id])
+  status               RewardClaimStatus @default(CONFIRMED)
+  claimedAt            DateTime          @default(now())
+  cancelledAt          DateTime?
+  cancelledByAdminId   String?
+  cancelledByAdmin     User?             @relation("AdminCancelledClaims", fields: [cancelledByAdminId], references: [id])
+
+  @@index([customerId])
+}
+
+/// Single-row config table — application code always reads/writes id 1.
+model LoyaltySetting {
+  id             Int      @id @default(1)
+  stampThreshold Int      @default(10)
+  updatedAt      DateTime @updatedAt
 }
