@@ -3,6 +3,7 @@ import { Check } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { LoyaltyCard } from "@/components/loyalty-card";
 
 const steps = [
   {
@@ -73,29 +74,8 @@ export default function LandingPage() {
             </div>
 
             <div className="flex justify-center md:justify-end">
-              <div className="w-56 rounded-2xl bg-gradient-to-br from-brand-700 to-brand-600 p-5 text-primary-foreground shadow-warm-lg">
-                <p className="text-xs opacity-85">Kartu Sarah</p>
-                <div
-                  className="mx-auto my-4 size-28 rounded-lg bg-white/15"
-                  style={{
-                    backgroundImage:
-                      "repeating-conic-gradient(rgba(255,255,255,.85) 0% 25%, transparent 0% 50%)",
-                    backgroundSize: "10px 10px",
-                  }}
-                  aria-hidden
-                />
-                <div className="mb-1.5 flex justify-between text-[11px] opacity-90">
-                  <span>6 dari 10 stempel</span>
-                  <span>4 lagi</span>
-                </div>
-                <div className="flex gap-1">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <span
-                      key={i}
-                      className={`h-1.5 flex-1 rounded-full ${i < 6 ? "bg-reward-border" : "bg-white/25"}`}
-                    />
-                  ))}
-                </div>
+              <div className="w-64">
+                <LoyaltyCard customerName="Sarah" stamps={6} threshold={10} />
               </div>
             </div>
           </div>

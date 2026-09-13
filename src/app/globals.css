@@ -47,26 +47,27 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Handai brand ramp — full steps for cases the semantic slots above don't cover
-     (gradients, stamp dots, chart bars). See the approved design system for usage rules. */
-  --color-brand-50: #f3f7f0;
-  --color-brand-100: #e4eedc;
-  --color-brand-200: #c9debd;
-  --color-brand-300: #a7c99a;
-  --color-brand-400: #85b177;
-  --color-brand-500: #5f8f52;
-  --color-brand-600: #4a7740;
-  --color-brand-700: #395f30;
-  --color-brand-800: #2c4a26;
-  --color-brand-900: #21391d;
+  /* Handai brand ramp — anchored on the real brand marks (Primary Green
+     #0C9044 at 600, Dark Green/CTA #0B572B at 700). Full steps cover cases
+     the semantic slots above don't (gradients, stamp circles, chart bars). */
+  --color-brand-50: #eef9f1;
+  --color-brand-100: #e8f5ec;
+  --color-brand-200: #c3e9d2;
+  --color-brand-300: #8fd3aa;
+  --color-brand-400: #4cb87c;
+  --color-brand-500: #1d9f5c;
+  --color-brand-600: #0c9044;
+  --color-brand-700: #0b572b;
+  --color-brand-800: #08401f;
+  --color-brand-900: #062e16;
 
-  --color-cream-100: #f3eee3;
-  --color-cream-200: #e7dfce;
+  --color-cream-100: #e8f5ec;
+  --color-cream-200: #dceae1;
 
-  --color-charcoal-300: #c9c4b4;
-  --color-charcoal-500: #7c7a6e;
-  --color-charcoal-700: #4b4a42;
-  --color-charcoal-900: #24231e;
+  --color-charcoal-300: #d6dbd8;
+  --color-charcoal-500: #8a8f8c;
+  --color-charcoal-700: #5c605d;
+  --color-charcoal-900: #3a3a3a;
 
   /* Reserved for exactly one thing: "eligible for reward" — see design system. */
   --color-reward: #c6912e;
@@ -74,44 +75,44 @@
   --color-reward-muted: #fbf0da;
   --color-reward-border: #e6c27c;
 
-  --shadow-warm-sm: 0 1px 2px rgba(36, 35, 30, 0.07), 0 1px 1px rgba(36, 35, 30, 0.04);
-  --shadow-warm-md: 0 6px 16px rgba(36, 35, 30, 0.09), 0 2px 4px rgba(36, 35, 30, 0.05);
-  --shadow-warm-lg: 0 20px 48px rgba(36, 35, 30, 0.16), 0 4px 10px rgba(36, 35, 30, 0.06);
+  --shadow-warm-sm: 0 1px 2px rgba(58, 58, 58, 0.07), 0 1px 1px rgba(58, 58, 58, 0.04);
+  --shadow-warm-md: 0 6px 16px rgba(58, 58, 58, 0.09), 0 2px 4px rgba(58, 58, 58, 0.05);
+  --shadow-warm-lg: 0 20px 48px rgba(58, 58, 58, 0.16), 0 4px 10px rgba(58, 58, 58, 0.06);
 }
 
 :root {
-  --background: #fbf8f2;
-  --foreground: #24231e;
+  --background: #ffffff;
+  --foreground: #3a3a3a;
   --card: #ffffff;
-  --card-foreground: #24231e;
+  --card-foreground: #3a3a3a;
   --popover: #ffffff;
-  --popover-foreground: #24231e;
-  --primary: #4a7740;
-  --primary-foreground: #fbf8f2;
-  --secondary: #f3eee3;
-  --secondary-foreground: #24231e;
-  --muted: #f3eee3;
-  --muted-foreground: #7c7a6e;
-  --accent: #e4eedc;
-  --accent-foreground: #2c4a26;
+  --popover-foreground: #3a3a3a;
+  --primary: #0c9044;
+  --primary-foreground: #ffffff;
+  --secondary: #e8f5ec;
+  --secondary-foreground: #0b572b;
+  --muted: #e8f5ec;
+  --muted-foreground: #6b7570;
+  --accent: #e8f5ec;
+  --accent-foreground: #08401f;
   --destructive: #bd5138;
-  --border: #e7dfce;
-  --input: #e7dfce;
-  --ring: #5f8f52;
-  --chart-1: #a7c99a;
-  --chart-2: #85b177;
-  --chart-3: #5f8f52;
-  --chart-4: #395f30;
+  --border: #dceae1;
+  --input: #dceae1;
+  --ring: #0c9044;
+  --chart-1: #8fd3aa;
+  --chart-2: #4cb87c;
+  --chart-3: #1d9f5c;
+  --chart-4: #0b572b;
   --chart-5: #c6912e;
   --radius: 1rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #24231e;
-  --sidebar-primary: #4a7740;
-  --sidebar-primary-foreground: #fbf8f2;
-  --sidebar-accent: #f3f7f0;
-  --sidebar-accent-foreground: #2c4a26;
-  --sidebar-border: #e7dfce;
-  --sidebar-ring: #5f8f52;
+  --sidebar-foreground: #3a3a3a;
+  --sidebar-primary: #0c9044;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e8f5ec;
+  --sidebar-accent-foreground: #08401f;
+  --sidebar-border: #dceae1;
+  --sidebar-ring: #0c9044;
 }
 
 /* No dark theme yet — the product spec doesn't call for one, and adding an unused

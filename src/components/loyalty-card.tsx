@@ -1,8 +1,8 @@
-import { QrCode } from "lucide-react";
+import { QrCode, Gift } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const MAX_DOTS = 12;
+const MAX_CIRCLES = 12;
 
 export function LoyaltyCard({
   customerName,
@@ -17,7 +17,7 @@ export function LoyaltyCard({
 }) {
   const eligible = stamps >= threshold;
   const remaining = Math.max(threshold - stamps, 0);
-  const useDots = threshold > 0 && threshold <= MAX_DOTS;
+  const useCircles = threshold > 0 && threshold <= MAX_CIRCLES;
   const progressPercent = threshold > 0 ? Math.min((stamps / threshold) * 100, 100) : 0;
 
   return (
@@ -27,13 +27,12 @@ export function LoyaltyCard({
         eligible && "ring-2 ring-reward ring-offset-2 ring-offset-background"
       )}
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs opacity-80">Kartu Loyalitas</p>
-          <p className="text-sm font-semibold">{customerName}</p>
-        </div>
+      <div className="flex items-start justify-between gap-2">
+        <span className="inline-flex max-w-[70%] items-center truncate rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand-700">
+          {customerName}
+        </span>
         {eligible && (
-          <Badge className="border-transparent bg-reward text-reward-foreground">
+          <Badge className="shrink-0 border-transparent bg-reward text-reward-foreground">
             Siap Diklaim
           </Badge>
         )}
@@ -57,23 +56,41 @@ export function LoyaltyCard({
         )}
       </div>
 
-      <div className="mb-1.5 flex justify-between text-[11px] opacity-90">
+      <div className="mb-3 flex justify-between text-[11px] opacity-90">
         <span>
           {stamps} dari {threshold} stempel
         </span>
         <span>{eligible ? "Tunjukkan ke barista" : `${remaining} lagi`}</span>
       </div>
-      {useDots ? (
-        <div className="flex gap-1">
-          {Array.from({ length: threshold }).map((_, i) => (
-            <span
-              key={i}
-              className={cn(
-                "h-1.5 flex-1 rounded-full bg-white/25",
-                i < stamps && (eligible ? "bg-reward-border" : "bg-white")
-              )}
-            />
-          ))}
+
+      {useCircles ? (
+        <div className="grid grid-cols-4 gap-2">
+          {Array.from({ length: threshold }).map((_, i) => {
+            const earned = i < stamps;
+            return (
+              <div
+                key={i}
+                className={cn(
+                  "flex aspect-square items-center justify-center rounded-full border text-[11px] font-semibold tabular-nums",
+                  earned
+                    ? "border-white bg-white text-brand-700"
+                    : "border-white/35 text-white/70"
+                )}
+              >
+                {i + 1}
+              </div>
+            );
+          })}
+          <div
+            className={cn(
+              "flex aspect-square items-center justify-center rounded-full border",
+              eligible
+                ? "border-reward bg-reward text-reward-foreground"
+                : "border-white/35 text-white/70"
+            )}
+          >
+            <Gift className="size-4" strokeWidth={2} />
+          </div>
         </div>
       ) : (
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/25">
