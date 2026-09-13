@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getStoreDayBounds } from "@/lib/store-time";
 
-export const DEFAULT_STAMP_THRESHOLD = 10;
+export const DEFAULT_STAMP_THRESHOLD = 7;
 
 export async function getStampThreshold(): Promise<number> {
   const setting = await prisma.loyaltySetting.findUnique({ where: { id: 1 } });

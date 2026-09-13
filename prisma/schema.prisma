@@ -76,6 +76,6 @@ model RewardClaim {
 /// Single-row config table — application code always reads/writes id 1.
 model LoyaltySetting {
   id             Int      @id @default(1)
-  stampThreshold Int      @default(10)
+  stampThreshold Int      @default(7)
   updatedAt      DateTime @updatedAt
 }

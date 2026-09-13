@@ -75,7 +75,7 @@ export default function LandingPage() {
 
             <div className="flex justify-center md:justify-end">
               <div className="w-64">
-                <LoyaltyCard customerName="Sarah" stamps={6} threshold={10} />
+                <LoyaltyCard customerName="Sarah" stamps={5} threshold={7} />
               </div>
             </div>
           </div>
