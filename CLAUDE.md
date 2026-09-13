@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-In development. Milestones 1–7 are complete per `docs/roadmap.md` (setup, UI, auth, data model, loyalty flow, admin panel, manual testing pass). Authentication setup and local testing steps: `docs/authentication.md`. Next up: Milestone 8 (Deployment).
+Live at https://projectcobacoba.vercel.app. Milestones 1–8 substantially complete per `docs/roadmap.md` — see `docs/deployment.md` for what's configured in production and what's still outstanding (Resend isn't set up yet, so customer self-registration currently errors in production; staff accounts are unaffected). Authentication setup and local testing steps: `docs/authentication.md`.
 
 ## Project summary
 

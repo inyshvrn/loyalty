@@ -13,7 +13,11 @@ See `docs/product-requirements.md` for the full spec, `docs/technical-architectu
 
 ## Status
 
-In development — Milestones 1–7 complete (through manual testing of core flows). See `docs/roadmap.md` for the full milestone plan and `CLAUDE.md` for the current state.
+Live at **https://projectcobacoba.vercel.app**. Milestones 1–8 substantially
+complete — see `docs/deployment.md` for what's configured in production and
+what's still outstanding (Resend email isn't set up yet). See
+`docs/roadmap.md` for the full milestone plan and `CLAUDE.md` for the
+current state.
 
 ## Stack
 
