@@ -13,7 +13,7 @@ See `docs/product-requirements.md` for the full spec, `docs/technical-architectu
 
 ## Status
 
-Live at **https://projectcobacoba.vercel.app**. Milestones 1–8 substantially
+Live at **https://handai-coffee-loyalty.vercel.app**. Milestones 1–8 substantially
 complete — see `docs/deployment.md` for what's configured in production and
 what's still outstanding (Resend email isn't set up yet). See
 `docs/roadmap.md` for the full milestone plan and `CLAUDE.md` for the

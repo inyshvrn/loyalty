@@ -1,13 +1,16 @@
 # Deployment — Milestone 8 Notes
 
-Live at **https://projectcobacoba.vercel.app**. This doc records how
+Live at **https://handai-coffee-loyalty.vercel.app**. This doc records how
 production was set up and what's still outstanding — no secrets here, just
 process (see `.env.example` for the variable names).
 
 ## What's configured
 
-- **App**: Vercel project `project_coba_coba`, now Git-connected to
-  `github.com/inyshvrn/loyalty` — pushes to `main` auto-deploy to production.
+- **App**: Vercel project `handai-coffee-loyalty` (renamed from
+  `project_coba_coba` — the old `projectcobacoba.vercel.app` domain still
+  resolves to the same deployment, kept as a secondary alias), Git-connected
+  to `github.com/inyshvrn/loyalty` — pushes to `main` auto-deploy to
+  production.
 - **Database**: Prisma Postgres (`ap-southeast-1`, Singapore — closest region
   to the outlet), claimed into the owner's Prisma account so it's permanent
   (unclaimed `create-db` databases auto-delete after 24h). All migrations

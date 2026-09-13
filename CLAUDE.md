@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Live at https://projectcobacoba.vercel.app. Milestones 1–8 substantially complete per `docs/roadmap.md` — see `docs/deployment.md` for what's configured in production and what's still outstanding (Resend isn't set up yet, so customer self-registration currently errors in production; staff accounts are unaffected). Authentication setup and local testing steps: `docs/authentication.md`.
+Live at https://handai-coffee-loyalty.vercel.app. Milestones 1–8 substantially complete per `docs/roadmap.md` — see `docs/deployment.md` for what's configured in production and what's still outstanding (Resend isn't set up yet, so customer self-registration currently errors in production; staff accounts are unaffected). Authentication setup and local testing steps: `docs/authentication.md`.
 
 ## Project summary
 
