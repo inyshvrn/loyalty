@@ -1,4 +1,4 @@
-import { Leaf } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export function BrandMark({
@@ -9,10 +9,15 @@ export function BrandMark({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-center gap-2.5", className)}>
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary">
-        <Leaf className="size-4 text-primary-foreground" strokeWidth={2} />
-      </span>
+    <div className={cn("flex items-center gap-2", className)}>
+      <Image
+        src="/logo-icon.png"
+        alt=""
+        width={465}
+        height={465}
+        className="size-8 shrink-0"
+        priority
+      />
       {!hideLabel && (
         <span className="text-sm font-bold tracking-tight text-foreground">
           Handai Coffee
