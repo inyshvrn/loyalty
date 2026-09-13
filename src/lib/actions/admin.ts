@@ -74,6 +74,80 @@ export async function setBaristaActiveAction(userId: string, isActive: boolean) 
   revalidatePath("/admin/baristas");
 }
 
+const updateBaristaSchema = z.object({
+  userId: z.string().min(1),
+  name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
+  email: z.string().trim().toLowerCase().email("Format email tidak valid"),
+  password: z.union([z.literal(""), z.string().min(8, "Kata sandi minimal 8 karakter")]),
+});
+
+export async function updateBaristaAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const parsed = updateBaristaSchema.safeParse({
+    userId: formData.get("userId"),
+    name: formData.get("name"),
+    email: formData.get("email"),
+    password: formData.get("password") ?? "",
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
+  }
+  const { userId, name, email, password } = parsed.data;
+
+  const barista = await prisma.user.findUnique({ where: { id: userId } });
+  if (!barista || barista.role !== "BARISTA") {
+    return { error: "Akun barista tidak ditemukan." };
+  }
+
+  const emailTaken = await prisma.user.findFirst({
+    where: { email, NOT: { id: userId } },
+  });
+  if (emailTaken) {
+    return { error: "Email ini sudah dipakai akun lain." };
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      name,
+      email,
+      ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}),
+    },
+  });
+
+  revalidatePath("/admin/baristas");
+  return { success: `Akun barista ${name} diperbarui.` };
+}
+
+export async function deleteBaristaAction(userId: string): Promise<CorrectionResult> {
+  await requireAdmin();
+
+  const barista = await prisma.user.findUnique({ where: { id: userId } });
+  if (!barista || barista.role !== "BARISTA") {
+    return { ok: false, error: "Akun barista tidak ditemukan." };
+  }
+
+  const [stampCount, claimCount] = await Promise.all([
+    prisma.stamp.count({ where: { scannedByBaristaId: userId } }),
+    prisma.rewardClaim.count({ where: { confirmedByBaristaId: userId } }),
+  ]);
+  if (stampCount > 0 || claimCount > 0) {
+    return {
+      ok: false,
+      error:
+        "Barista ini sudah punya riwayat scan/klaim — tidak bisa dihapus permanen agar riwayat tetap utuh. Nonaktifkan saja akunnya.",
+    };
+  }
+
+  await prisma.user.delete({ where: { id: userId } });
+  revalidatePath("/admin/baristas");
+  return { ok: true };
+}
+
 // ---- Threshold setting ----
 
 const thresholdSchema = z.coerce.number().int().min(1, "Minimal 1 stempel").max(1000);

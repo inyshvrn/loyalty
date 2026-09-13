@@ -11,6 +11,8 @@ import {
 import { prisma } from "@/lib/prisma";
 import { CreateBaristaDialog } from "@/components/admin/create-barista-dialog";
 import { ToggleBaristaActiveButton } from "@/components/admin/toggle-barista-active-button";
+import { EditBaristaDialog } from "@/components/admin/edit-barista-dialog";
+import { DeleteBaristaButton } from "@/components/admin/delete-barista-button";
 
 export default async function AdminBaristasPage() {
   const baristas = await prisma.user.findMany({
@@ -56,10 +58,18 @@ export default async function AdminBaristasPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <ToggleBaristaActiveButton
-                        userId={b.id}
-                        isActive={b.isActive}
-                      />
+                      <div className="flex items-center justify-end gap-1">
+                        <ToggleBaristaActiveButton
+                          userId={b.id}
+                          isActive={b.isActive}
+                        />
+                        <EditBaristaDialog
+                          userId={b.id}
+                          name={b.name}
+                          email={b.email}
+                        />
+                        <DeleteBaristaButton userId={b.id} name={b.name} />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -86,10 +96,18 @@ export default async function AdminBaristasPage() {
                     {b.email}
                   </p>
                 </div>
-                <ToggleBaristaActiveButton
-                  userId={b.id}
-                  isActive={b.isActive}
-                />
+                <div className="flex items-center gap-1">
+                  <ToggleBaristaActiveButton
+                    userId={b.id}
+                    isActive={b.isActive}
+                  />
+                  <EditBaristaDialog
+                    userId={b.id}
+                    name={b.name}
+                    email={b.email}
+                  />
+                  <DeleteBaristaButton userId={b.id} name={b.name} />
+                </div>
               </Card>
             ))}
           </div>
