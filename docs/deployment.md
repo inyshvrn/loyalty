@@ -19,6 +19,18 @@ process (see `.env.example` for the variable names).
   dev seed script/placeholders — those stay local-only). Admin can log in now
   at `/login` and reach `/admin/dashboard`.
 
+## Function region matches the database region
+
+`vercel.json` pins Vercel Functions to `sin1` (Singapore) via `"regions"`.
+Without this, Vercel defaulted functions to `iad1` (US East) while the
+database lives in `ap-southeast-1` (also Singapore) — every DB round trip
+was crossing the Pacific twice, and pages doing several queries compounded
+that into 2-5s navigations. Pinning both to Singapore (matching where the
+outlet's actual users are too) brought that down to ~1s, measured directly
+against production before/after. `preferredRegion` in Next.js route files is
+deprecated for Vercel and no longer accepts arbitrary region codes — this
+has to be set via `vercel.json`, not application code.
+
 ## Outstanding: Resend not configured yet
 
 `RESEND_API_KEY` is **not set** in production. Per the fail-loud design from
