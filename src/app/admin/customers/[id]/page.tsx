@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import QRCode from "qrcode";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
@@ -16,6 +17,7 @@ import { RemoveStampButton } from "@/components/admin/remove-stamp-button";
 import { CancelClaimButton } from "@/components/admin/cancel-claim-button";
 import { EditCustomerDialog } from "@/components/admin/edit-customer-dialog";
 import { DeleteCustomerButton } from "@/components/admin/delete-customer-button";
+import { ViewQrDialog } from "@/components/admin/view-qr-dialog";
 
 export default async function AdminCustomerDetailPage(
   props: PageProps<"/admin/customers/[id]">
@@ -33,6 +35,13 @@ export default async function AdminCustomerDetailPage(
     getRecentStampsWithStaff(id, 30),
     getRecentClaimsWithStaff(id, 30),
   ]);
+
+  let qrDataUrl: string | null = null;
+  try {
+    qrDataUrl = await QRCode.toDataURL(customer.id, { margin: 1, width: 240 });
+  } catch (err) {
+    console.error("Failed to generate QR code:", err);
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 md:px-8 md:py-10">
@@ -55,6 +64,7 @@ export default async function AdminCustomerDetailPage(
               phone={customer.phone}
             />
             <DeleteCustomerButton userId={customer.id} name={customer.name} />
+            <ViewQrDialog name={customer.name} qrDataUrl={qrDataUrl} />
           </div>
           <p className="text-sm text-muted-foreground">
             {customer.email}
@@ -102,6 +112,7 @@ export default async function AdminCustomerDetailPage(
                   {formatRelativeIndonesian(s.createdAt)}
                   {" · oleh "}
                   {s.scannedByBarista.name}
+                  {s.outlet && ` · ${s.outlet.name}`}
                 </span>
                 <div className="flex items-center gap-1">
                   <span className="font-medium text-foreground">

@@ -15,16 +15,20 @@ import { EditBaristaDialog } from "@/components/admin/edit-barista-dialog";
 import { DeleteBaristaButton } from "@/components/admin/delete-barista-button";
 
 export default async function AdminBaristasPage() {
-  const baristas = await prisma.user.findMany({
-    where: { role: "BARISTA" },
-    orderBy: { name: "asc" },
-  });
+  const [baristas, outlets] = await Promise.all([
+    prisma.user.findMany({
+      where: { role: "BARISTA" },
+      orderBy: { name: "asc" },
+      include: { outlet: { select: { name: true } } },
+    }),
+    prisma.outlet.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+  ]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-10">
       <div className="mb-5 flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Barista</h1>
-        <CreateBaristaDialog />
+        <CreateBaristaDialog outlets={outlets} />
       </div>
 
       {baristas.length === 0 ? (
@@ -39,6 +43,7 @@ export default async function AdminBaristasPage() {
                 <TableRow>
                   <TableHead>Nama</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Outlet</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
@@ -51,6 +56,9 @@ export default async function AdminBaristasPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {b.email}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {b.outlet?.name ?? "—"}
                     </TableCell>
                     <TableCell>
                       <Badge variant={b.isActive ? "secondary" : "outline"}>
@@ -67,6 +75,8 @@ export default async function AdminBaristasPage() {
                           userId={b.id}
                           name={b.name}
                           email={b.email}
+                          outletId={b.outletId}
+                          outlets={outlets}
                         />
                         <DeleteBaristaButton userId={b.id} name={b.name} />
                       </div>
@@ -93,7 +103,7 @@ export default async function AdminBaristasPage() {
                     </Badge>
                   </div>
                   <p className="truncate text-xs text-muted-foreground">
-                    {b.email}
+                    {b.email} · {b.outlet?.name ?? "Tanpa outlet"}
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
@@ -105,6 +115,8 @@ export default async function AdminBaristasPage() {
                     userId={b.id}
                     name={b.name}
                     email={b.email}
+                    outletId={b.outletId}
+                    outlets={outlets}
                   />
                   <DeleteBaristaButton userId={b.id} name={b.name} />
                 </div>

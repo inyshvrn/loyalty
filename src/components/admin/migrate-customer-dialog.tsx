@@ -7,13 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogTrigger,
   DialogContent,
@@ -23,15 +16,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { FormMessage } from "@/components/auth/form-message";
-import { createBaristaAction } from "@/lib/actions/admin";
+import { migrateCustomerAction } from "@/lib/actions/admin";
 
-const NO_OUTLET = "__none__";
-
-export function CreateBaristaDialog({
-  outlets,
-}: {
-  outlets: { id: string; name: string }[];
-}) {
+export function MigrateCustomerDialog() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -42,9 +29,8 @@ export function CreateBaristaDialog({
     setPending(true);
     setError(undefined);
     const formData = new FormData(e.currentTarget);
-    if (formData.get("outletId") === NO_OUTLET) formData.set("outletId", "");
     try {
-      const result = await createBaristaAction(null, formData);
+      const result = await migrateCustomerAction(null, formData);
       if (result?.error) {
         setError(result.error);
         return;
@@ -64,32 +50,41 @@ export function CreateBaristaDialog({
         if (next) setError(undefined);
       }}
     >
-      <DialogTrigger render={<Button type="button" size="sm" />}>
+      <DialogTrigger render={<Button type="button" size="sm" variant="outline" />}>
         <UserPlus className="size-4" />
-        Tambah Barista
+        Daftarkan Pelanggan Lama
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Tambah Akun Barista</DialogTitle>
+          <DialogTitle>Daftarkan Pelanggan Lama</DialogTitle>
           <DialogDescription>
-            Akun langsung aktif dan terverifikasi — barista tidak perlu
-            verifikasi email.
+            Buat akun berikut progres awal buat pelanggan yang pindah dari
+            kartu kertas — akun langsung aktif dan terverifikasi.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <FormMessage error={error} />
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="barista-name">Nama</Label>
-            <Input id="barista-name" name="name" required />
+            <Label htmlFor="migrate-name">Nama</Label>
+            <Input id="migrate-name" name="name" required />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="barista-email">Email</Label>
-            <Input id="barista-email" name="email" type="email" required />
+            <Label htmlFor="migrate-email">Email</Label>
+            <Input id="migrate-email" name="email" type="email" required />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="barista-password">Kata sandi awal</Label>
+            <Label htmlFor="migrate-phone">Nomor HP</Label>
             <Input
-              id="barista-password"
+              id="migrate-phone"
+              name="phone"
+              placeholder="08xxxxxxxxxx"
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="migrate-password">Kata sandi awal</Label>
+            <Input
+              id="migrate-password"
               name="password"
               type="password"
               minLength={8}
@@ -97,24 +92,22 @@ export function CreateBaristaDialog({
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="barista-outlet">Outlet</Label>
-            <Select name="outletId" defaultValue={NO_OUTLET}>
-              <SelectTrigger id="barista-outlet" className="w-full">
-                <SelectValue placeholder="Tanpa outlet" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_OUTLET}>Tanpa outlet</SelectItem>
-                {outlets.map((o) => (
-                  <SelectItem key={o.id} value={o.id}>
-                    {o.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="migrate-stamps">
+              Jumlah stempel awal (dari kartu kertas)
+            </Label>
+            <Input
+              id="migrate-stamps"
+              name="initialStamps"
+              type="number"
+              min={0}
+              max={999}
+              defaultValue={0}
+              required
+            />
           </div>
           <DialogFooter>
             <Button type="submit" disabled={pending}>
-              {pending ? "Menyimpan..." : "Buat Akun"}
+              {pending ? "Menyimpan..." : "Daftarkan"}
             </Button>
           </DialogFooter>
         </form>

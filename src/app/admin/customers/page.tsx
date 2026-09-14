@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { prisma } from "@/lib/prisma";
 import { getStampThreshold, getCustomerProgressWithThreshold } from "@/lib/loyalty";
+import { MigrateCustomerDialog } from "@/components/admin/migrate-customer-dialog";
 
 export default async function AdminCustomersPage(
   props: PageProps<"/admin/customers">
@@ -49,7 +50,10 @@ export default async function AdminCustomersPage(
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-10">
-      <h1 className="mb-5 text-xl font-bold text-foreground">Pelanggan</h1>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-foreground">Pelanggan</h1>
+        <MigrateCustomerDialog />
+      </div>
 
       <form className="relative mb-4 max-w-sm">
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />

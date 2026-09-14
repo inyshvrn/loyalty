@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getStoreDayBounds, formatStoreTime } from "@/lib/store-time";
+import { phoneSchema } from "@/lib/validators";
 
 async function requireAdmin() {
   const session = await auth();
@@ -23,6 +24,7 @@ const createBaristaSchema = z.object({
   name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
   email: z.string().trim().toLowerCase().email("Format email tidak valid"),
   password: z.string().min(8, "Kata sandi minimal 8 karakter"),
+  outletId: z.union([z.literal(""), z.string().min(1)]),
 });
 
 export async function createBaristaAction(
@@ -35,6 +37,7 @@ export async function createBaristaAction(
     name: formData.get("name"),
     email: formData.get("email"),
     password: formData.get("password"),
+    outletId: formData.get("outletId") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
@@ -55,6 +58,7 @@ export async function createBaristaAction(
       passwordHash,
       role: "BARISTA",
       emailVerified: true, // staff accounts skip self-verification
+      outletId: parsed.data.outletId || null,
     },
   });
 
@@ -79,6 +83,7 @@ const updateBaristaSchema = z.object({
   name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
   email: z.string().trim().toLowerCase().email("Format email tidak valid"),
   password: z.union([z.literal(""), z.string().min(8, "Kata sandi minimal 8 karakter")]),
+  outletId: z.union([z.literal(""), z.string().min(1)]),
 });
 
 export async function updateBaristaAction(
@@ -92,11 +97,12 @@ export async function updateBaristaAction(
     name: formData.get("name"),
     email: formData.get("email"),
     password: formData.get("password") ?? "",
+    outletId: formData.get("outletId") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
   }
-  const { userId, name, email, password } = parsed.data;
+  const { userId, name, email, password, outletId } = parsed.data;
 
   const barista = await prisma.user.findUnique({ where: { id: userId } });
   if (!barista || barista.role !== "BARISTA") {
@@ -115,6 +121,7 @@ export async function updateBaristaAction(
     data: {
       name,
       email,
+      outletId: outletId || null,
       ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}),
     },
   });
@@ -148,6 +155,87 @@ export async function deleteBaristaAction(userId: string): Promise<CorrectionRes
   return { ok: true };
 }
 
+// ---- Outlet management ----
+
+const outletNameSchema = z.string().trim().min(2, "Nama outlet minimal 2 karakter").max(100);
+
+export async function createOutletAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const parsed = outletNameSchema.safeParse(formData.get("name"));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Nama tidak valid" };
+  }
+
+  await prisma.outlet.create({ data: { name: parsed.data } });
+
+  revalidatePath("/admin/outlets");
+  revalidatePath("/admin/baristas");
+  return { success: `Outlet ${parsed.data} ditambahkan.` };
+}
+
+const updateOutletSchema = z.object({
+  outletId: z.string().min(1),
+  name: outletNameSchema,
+});
+
+export async function updateOutletAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const parsed = updateOutletSchema.safeParse({
+    outletId: formData.get("outletId"),
+    name: formData.get("name"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
+  }
+
+  const outlet = await prisma.outlet.findUnique({ where: { id: parsed.data.outletId } });
+  if (!outlet) {
+    return { error: "Outlet tidak ditemukan." };
+  }
+
+  await prisma.outlet.update({
+    where: { id: parsed.data.outletId },
+    data: { name: parsed.data.name },
+  });
+
+  revalidatePath("/admin/outlets");
+  revalidatePath("/admin/baristas");
+  return { success: `Outlet diperbarui menjadi ${parsed.data.name}.` };
+}
+
+export async function deleteOutletAction(outletId: string): Promise<CorrectionResult> {
+  await requireAdmin();
+
+  const outlet = await prisma.outlet.findUnique({ where: { id: outletId } });
+  if (!outlet) {
+    return { ok: false, error: "Outlet tidak ditemukan." };
+  }
+
+  const [baristaCount, stampCount] = await Promise.all([
+    prisma.user.count({ where: { outletId } }),
+    prisma.stamp.count({ where: { outletId } }),
+  ]);
+  if (baristaCount > 0 || stampCount > 0) {
+    return {
+      ok: false,
+      error:
+        "Outlet ini masih ada barista atau riwayat stempel yang terkait — pindahkan baristanya dulu sebelum menghapus.",
+    };
+  }
+
+  await prisma.outlet.delete({ where: { id: outletId } });
+  revalidatePath("/admin/outlets");
+  return { ok: true };
+}
+
 // ---- Threshold setting ----
 
 const thresholdSchema = z.coerce.number().int().min(1, "Minimal 1 stempel").max(1000);
@@ -173,13 +261,77 @@ export async function updateThresholdAction(
   return { success: `Target stempel diperbarui menjadi ${parsed.data}.` };
 }
 
+// ---- Customer migration (paper-card customers moving to the app) ----
+
+const migrateCustomerSchema = z.object({
+  name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
+  email: z.string().trim().toLowerCase().email("Format email tidak valid"),
+  phone: phoneSchema,
+  password: z.string().min(8, "Kata sandi minimal 8 karakter"),
+  initialStamps: z.coerce.number().int().min(0, "Tidak boleh negatif").max(999),
+});
+
+export async function migrateCustomerAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const admin = await requireAdmin();
+
+  const parsed = migrateCustomerSchema.safeParse({
+    name: formData.get("name"),
+    email: formData.get("email"),
+    phone: formData.get("phone"),
+    password: formData.get("password"),
+    initialStamps: formData.get("initialStamps"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
+  }
+  const { name, email, phone, password, initialStamps } = parsed.data;
+
+  const emailTaken = await prisma.user.findUnique({ where: { email } });
+  if (emailTaken) {
+    return { error: "Email ini sudah terdaftar." };
+  }
+  const phoneTaken = await prisma.user.findFirst({ where: { phone } });
+  if (phoneTaken) {
+    return { error: "Nomor HP ini sudah terdaftar di akun lain." };
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  const customer = await prisma.user.create({
+    data: {
+      name,
+      email,
+      phone,
+      passwordHash,
+      role: "CUSTOMER",
+      emailVerified: true, // admin registers them in person, no self-verification needed
+    },
+  });
+
+  if (initialStamps > 0) {
+    await prisma.stamp.createMany({
+      data: Array.from({ length: initialStamps }, () => ({
+        customerId: customer.id,
+        scannedByBaristaId: admin.id,
+      })),
+    });
+  }
+
+  revalidatePath("/admin/customers");
+  return {
+    success: `${name} didaftarkan${initialStamps > 0 ? ` dengan ${initialStamps} stempel awal` : ""}.`,
+  };
+}
+
 // ---- Customer edit ----
 
 const updateCustomerSchema = z.object({
   userId: z.string().min(1),
   name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
   email: z.string().trim().toLowerCase().email("Format email tidak valid"),
-  phone: z.union([z.literal(""), z.string().trim().min(8, "Nomor HP tidak valid").max(20)]),
+  phone: z.union([z.literal(""), phoneSchema]),
 });
 
 export async function updateCustomerAction(

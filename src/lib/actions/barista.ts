@@ -116,8 +116,17 @@ export async function addStampAction(customerId: string): Promise<AddStampResult
     };
   }
 
+  const scanningBarista = await prisma.user.findUnique({
+    where: { id: barista.id },
+    select: { outletId: true },
+  });
+
   await prisma.stamp.create({
-    data: { customerId, scannedByBaristaId: barista.id },
+    data: {
+      customerId,
+      scannedByBaristaId: barista.id,
+      outletId: scanningBarista?.outletId ?? null,
+    },
   });
 
   const data = await buildCustomerStatus(customer);

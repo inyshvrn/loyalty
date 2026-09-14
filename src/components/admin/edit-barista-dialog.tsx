@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogTrigger,
   DialogContent,
@@ -18,14 +25,20 @@ import {
 import { FormMessage } from "@/components/auth/form-message";
 import { updateBaristaAction } from "@/lib/actions/admin";
 
+const NO_OUTLET = "__none__";
+
 export function EditBaristaDialog({
   userId,
   name,
   email,
+  outletId,
+  outlets,
 }: {
   userId: string;
   name: string;
   email: string;
+  outletId: string | null;
+  outlets: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -37,6 +50,7 @@ export function EditBaristaDialog({
     setPending(true);
     setError(undefined);
     const formData = new FormData(e.currentTarget);
+    if (formData.get("outletId") === NO_OUTLET) formData.set("outletId", "");
     try {
       const result = await updateBaristaAction(null, formData);
       if (result?.error) {
@@ -104,6 +118,22 @@ export function EditBaristaDialog({
               minLength={8}
               placeholder="Kosongkan jika tidak diubah"
             />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={`edit-barista-outlet-${userId}`}>Outlet</Label>
+            <Select name="outletId" defaultValue={outletId ?? NO_OUTLET}>
+              <SelectTrigger id={`edit-barista-outlet-${userId}`} className="w-full">
+                <SelectValue placeholder="Tanpa outlet" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_OUTLET}>Tanpa outlet</SelectItem>
+                {outlets.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter>
             <Button type="submit" disabled={pending}>

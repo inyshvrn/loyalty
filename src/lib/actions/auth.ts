@@ -11,6 +11,7 @@ import {
 } from "@/lib/verification-token";
 import { sendVerificationEmail } from "@/lib/email";
 import { roleHome } from "@/lib/role-home";
+import { phoneSchema } from "@/lib/validators";
 
 const baseUrl = process.env.AUTH_URL ?? "http://localhost:3000";
 
@@ -27,7 +28,7 @@ export type ActionState = { error?: string; success?: string } | null;
 const registerSchema = z.object({
   name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
   email: z.string().trim().toLowerCase().email("Format email tidak valid"),
-  phone: z.string().trim().min(8, "Nomor HP tidak valid").max(20),
+  phone: phoneSchema,
   password: z.string().min(8, "Kata sandi minimal 8 karakter"),
 });
 

@@ -18,6 +18,18 @@ enum Role {
   ADMIN
 }
 
+/// A physical shop location. Only meaningful for baristas (which outlet they
+/// work at) and stamps (which outlet a scan happened at) — customers and
+/// admins aren't tied to one.
+model Outlet {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  baristas User[]  @relation("BaristaOutlet")
+  stamps   Stamp[] @relation("StampOutlet")
+}
+
 model User {
   id            String   @id @default(cuid())
   name          String
@@ -28,6 +40,8 @@ model User {
   role          Role     @default(CUSTOMER)
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
+  outletId      String?
+  outlet        Outlet?  @relation("BaristaOutlet", fields: [outletId], references: [id])
 
   stampsReceived  Stamp[]       @relation("CustomerStamps")
   stampsScanned   Stamp[]       @relation("BaristaScannedStamps")
@@ -38,13 +52,17 @@ model User {
 
 /// One row per QR scan. Current progress toward the threshold is derived —
 /// count of a customer's Stamp rows since their last RewardClaim (or since
-/// registration if none yet) — not stored directly.
+/// registration if none yet) — not stored directly. `outletId` is a snapshot
+/// of the scanning barista's outlet at scan time (nullable: null for stamps
+/// scanned before outlets existed, or by a barista with none assigned yet).
 model Stamp {
   id                 String   @id @default(cuid())
   customerId         String
   customer           User     @relation("CustomerStamps", fields: [customerId], references: [id])
   scannedByBaristaId String
   scannedByBarista   User     @relation("BaristaScannedStamps", fields: [scannedByBaristaId], references: [id])
+  outletId           String?
+  outlet             Outlet?  @relation("StampOutlet", fields: [outletId], references: [id])
   createdAt          DateTime @default(now())
 
   @@index([customerId])

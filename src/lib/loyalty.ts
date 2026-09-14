@@ -105,7 +105,10 @@ export function getRecentStampsWithStaff(customerId: string, limit = 10) {
     where: { customerId },
     orderBy: { createdAt: "desc" },
     take: limit,
-    include: { scannedByBarista: { select: { name: true } } },
+    include: {
+      scannedByBarista: { select: { name: true } },
+      outlet: { select: { name: true } },
+    },
   });
 }
 
