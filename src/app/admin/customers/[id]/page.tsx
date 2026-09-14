@@ -15,6 +15,7 @@ import { AddManualStampButton } from "@/components/admin/add-manual-stamp-button
 import { RemoveStampButton } from "@/components/admin/remove-stamp-button";
 import { CancelClaimButton } from "@/components/admin/cancel-claim-button";
 import { EditCustomerDialog } from "@/components/admin/edit-customer-dialog";
+import { DeleteCustomerButton } from "@/components/admin/delete-customer-button";
 
 export default async function AdminCustomerDetailPage(
   props: PageProps<"/admin/customers/[id]">
@@ -53,6 +54,7 @@ export default async function AdminCustomerDetailPage(
               email={customer.email}
               phone={customer.phone}
             />
+            <DeleteCustomerButton userId={customer.id} name={customer.name} />
           </div>
           <p className="text-sm text-muted-foreground">
             {customer.email}

@@ -59,6 +59,11 @@ export async function registerAction(
         await issueAndSendVerification(existing.id, existing.email);
       }
     } else {
+      const phoneTaken = await prisma.user.findFirst({ where: { phone } });
+      if (phoneTaken) {
+        return { error: "Nomor HP ini sudah terdaftar di akun lain." };
+      }
+
       const passwordHash = await bcrypt.hash(password, 12);
       const user = await prisma.user.create({
         data: { name, email, phone, passwordHash, role: "CUSTOMER" },

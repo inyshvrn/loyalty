@@ -211,6 +211,15 @@ export async function updateCustomerAction(
     return { error: "Email ini sudah dipakai akun lain." };
   }
 
+  if (phone) {
+    const phoneTaken = await prisma.user.findFirst({
+      where: { phone, NOT: { id: userId } },
+    });
+    if (phoneTaken) {
+      return { error: "Nomor HP ini sudah dipakai akun lain." };
+    }
+  }
+
   await prisma.user.update({
     where: { id: userId },
     data: { name, email, phone: phone || null },
@@ -219,6 +228,31 @@ export async function updateCustomerAction(
   revalidatePath(`/admin/customers/${userId}`);
   revalidatePath("/admin/customers");
   return { success: `Data ${name} diperbarui.` };
+}
+
+export async function deleteCustomerAction(userId: string): Promise<CorrectionResult> {
+  await requireAdmin();
+
+  const customer = await prisma.user.findUnique({ where: { id: userId } });
+  if (!customer || customer.role !== "CUSTOMER") {
+    return { ok: false, error: "Pelanggan tidak ditemukan." };
+  }
+
+  const [stampCount, claimCount] = await Promise.all([
+    prisma.stamp.count({ where: { customerId: userId } }),
+    prisma.rewardClaim.count({ where: { customerId: userId } }),
+  ]);
+  if (stampCount > 0 || claimCount > 0) {
+    return {
+      ok: false,
+      error:
+        "Pelanggan ini sudah punya riwayat stempel/klaim — tidak bisa dihapus permanen agar riwayat tetap utuh.",
+    };
+  }
+
+  await prisma.user.delete({ where: { id: userId } });
+  revalidatePath("/admin/customers");
+  return { ok: true };
 }
 
 // ---- Customer manual correction ----
