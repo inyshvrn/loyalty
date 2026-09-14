@@ -173,6 +173,54 @@ export async function updateThresholdAction(
   return { success: `Target stempel diperbarui menjadi ${parsed.data}.` };
 }
 
+// ---- Customer edit ----
+
+const updateCustomerSchema = z.object({
+  userId: z.string().min(1),
+  name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
+  email: z.string().trim().toLowerCase().email("Format email tidak valid"),
+  phone: z.union([z.literal(""), z.string().trim().min(8, "Nomor HP tidak valid").max(20)]),
+});
+
+export async function updateCustomerAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const parsed = updateCustomerSchema.safeParse({
+    userId: formData.get("userId"),
+    name: formData.get("name"),
+    email: formData.get("email"),
+    phone: formData.get("phone") ?? "",
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
+  }
+  const { userId, name, email, phone } = parsed.data;
+
+  const customer = await prisma.user.findUnique({ where: { id: userId } });
+  if (!customer || customer.role !== "CUSTOMER") {
+    return { error: "Pelanggan tidak ditemukan." };
+  }
+
+  const emailTaken = await prisma.user.findFirst({
+    where: { email, NOT: { id: userId } },
+  });
+  if (emailTaken) {
+    return { error: "Email ini sudah dipakai akun lain." };
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { name, email, phone: phone || null },
+  });
+
+  revalidatePath(`/admin/customers/${userId}`);
+  revalidatePath("/admin/customers");
+  return { success: `Data ${name} diperbarui.` };
+}
+
 // ---- Customer manual correction ----
 
 export type CorrectionResult = { ok: true } | { ok: false; error: string };

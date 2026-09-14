@@ -96,6 +96,31 @@ export async function countConfirmedClaimsThisMonth() {
   });
 }
 
+/** Admin-only variants of the customer history — include who performed the
+ * action. Kept separate from getRecentStamps/getRecentClaims (used on the
+ * customer-facing dashboard/history pages) so staff names are never fetched
+ * for, or exposed to, a customer's own view. */
+export function getRecentStampsWithStaff(customerId: string, limit = 10) {
+  return prisma.stamp.findMany({
+    where: { customerId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    include: { scannedByBarista: { select: { name: true } } },
+  });
+}
+
+export function getRecentClaimsWithStaff(customerId: string, limit = 10) {
+  return prisma.rewardClaim.findMany({
+    where: { customerId },
+    orderBy: { claimedAt: "desc" },
+    take: limit,
+    include: {
+      confirmedByBarista: { select: { name: true } },
+      cancelledByAdmin: { select: { name: true } },
+    },
+  });
+}
+
 /** Loops all customers to check eligibility — fine at this app's scale (a
  * single coffee shop's customer list), and simpler/more correct than trying
  * to express a per-customer "since last claim" cutoff in one aggregate query. */

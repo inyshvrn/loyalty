@@ -7,13 +7,14 @@ import { prisma } from "@/lib/prisma";
 import {
   getStampThreshold,
   getCustomerProgressWithThreshold,
-  getRecentStamps,
-  getRecentClaims,
+  getRecentStampsWithStaff,
+  getRecentClaimsWithStaff,
 } from "@/lib/loyalty";
 import { formatRelativeIndonesian } from "@/lib/format";
 import { AddManualStampButton } from "@/components/admin/add-manual-stamp-button";
 import { RemoveStampButton } from "@/components/admin/remove-stamp-button";
 import { CancelClaimButton } from "@/components/admin/cancel-claim-button";
+import { EditCustomerDialog } from "@/components/admin/edit-customer-dialog";
 
 export default async function AdminCustomerDetailPage(
   props: PageProps<"/admin/customers/[id]">
@@ -28,8 +29,8 @@ export default async function AdminCustomerDetailPage(
   const threshold = await getStampThreshold();
   const [progress, stamps, claims] = await Promise.all([
     getCustomerProgressWithThreshold(id, threshold),
-    getRecentStamps(id, 30),
-    getRecentClaims(id, 30),
+    getRecentStampsWithStaff(id, 30),
+    getRecentClaimsWithStaff(id, 30),
   ]);
 
   return (
@@ -44,7 +45,15 @@ export default async function AdminCustomerDetailPage(
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-foreground">{customer.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-foreground">{customer.name}</h1>
+            <EditCustomerDialog
+              userId={customer.id}
+              name={customer.name}
+              email={customer.email}
+              phone={customer.phone}
+            />
+          </div>
           <p className="text-sm text-muted-foreground">
             {customer.email}
             {customer.phone ? ` · ${customer.phone}` : ""}
@@ -89,6 +98,8 @@ export default async function AdminCustomerDetailPage(
               >
                 <span className="text-muted-foreground">
                   {formatRelativeIndonesian(s.createdAt)}
+                  {" · oleh "}
+                  {s.scannedByBarista.name}
                 </span>
                 <div className="flex items-center gap-1">
                   <span className="font-medium text-foreground">
@@ -125,6 +136,10 @@ export default async function AdminCustomerDetailPage(
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {formatRelativeIndonesian(c.claimedAt)}
+                    {" · oleh "}
+                    {c.status === "CANCELLED" && c.cancelledByAdmin
+                      ? c.cancelledByAdmin.name
+                      : c.confirmedByBarista.name}
                   </p>
                 </div>
                 {c.status === "CONFIRMED" && (
