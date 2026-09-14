@@ -4,6 +4,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LoyaltyCard } from "@/components/loyalty-card";
+import { BrandWatermark } from "@/components/brand-watermark";
 
 const steps = [
   {
@@ -47,8 +48,9 @@ export default function LandingPage() {
       </header>
 
       <main className="flex-1">
-        <section className="bg-gradient-to-b from-brand-50 to-background">
-          <div className="mx-auto grid max-w-5xl gap-10 px-5 py-16 md:grid-cols-2 md:items-center md:py-24">
+        <section className="relative overflow-hidden bg-gradient-to-b from-brand-50 to-background">
+          <BrandWatermark className="-top-20 -left-20 size-[28rem] bg-brand-600/[0.04] md:size-[36rem]" />
+          <div className="relative mx-auto grid max-w-5xl gap-10 px-5 py-16 md:grid-cols-2 md:items-center md:py-24">
             <div>
               <p className="mb-3 text-xs font-bold tracking-wide text-brand-700 uppercase">
                 Loyalty digital

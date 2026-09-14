@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandMark } from "@/components/brand-mark";
+import { BrandWatermark } from "@/components/brand-watermark";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "@/lib/nav-config";
@@ -19,14 +20,15 @@ export function SidebarNav({
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-sidebar px-3 py-6 md:flex">
-      <div className="mb-1 px-2">
+    <aside className="relative hidden w-60 shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar px-3 py-6 md:flex">
+      <BrandWatermark className="-bottom-16 -left-16 size-64 bg-primary/5" />
+      <div className="relative z-10 mb-1 px-2">
         <BrandMark />
         <p className="mt-1 pl-9.5 text-[11px] font-medium text-muted-foreground">
           {subtitle}
         </p>
       </div>
-      <nav className="mt-6 flex flex-col gap-0.5">
+      <nav className="relative z-10 mt-6 flex flex-col gap-0.5">
         {items.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(item.href + "/");
@@ -48,7 +50,7 @@ export function SidebarNav({
         })}
       </nav>
       {user && (
-        <div className="mt-auto border-t border-border px-2 pt-3">
+        <div className="relative z-10 mt-auto border-t border-border px-2 pt-3">
           <UserMenu name={user.name} email={user.email} />
         </div>
       )}

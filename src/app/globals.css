@@ -129,3 +129,19 @@
     @apply font-sans;
   }
 }
+
+@layer utilities {
+  /* Recolorable brand-mark watermark: the icon's alpha channel becomes a
+     mask, so `background-color` (set via a `bg-*` utility alongside this)
+     paints through it — one PNG, any tint, no separate export per color. */
+  .brand-watermark {
+    mask-image: url(/logo-icon.png);
+    -webkit-mask-image: url(/logo-icon.png);
+    mask-size: contain;
+    -webkit-mask-size: contain;
+    mask-repeat: no-repeat;
+    -webkit-mask-repeat: no-repeat;
+    mask-position: center;
+    -webkit-mask-position: center;
+  }
+}
