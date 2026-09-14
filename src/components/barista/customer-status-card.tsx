@@ -21,6 +21,11 @@ export function CustomerStatusCard({
           <p className="truncate text-sm font-semibold text-foreground">
             {status.name}
           </p>
+          {!status.emailVerified && (
+            <Badge variant="outline" className="shrink-0">
+              Belum Verifikasi
+            </Badge>
+          )}
           {status.eligible && (
             <Badge className="shrink-0 border-transparent bg-reward text-reward-foreground">
               Siap Diklaim
@@ -43,7 +48,12 @@ export function CustomerStatusCard({
             Konfirmasi Reward
           </Button>
         )}
-        <Button size="sm" type="button" disabled={busy} onClick={onAddStamp}>
+        <Button
+          size="sm"
+          type="button"
+          disabled={busy || !status.emailVerified}
+          onClick={onAddStamp}
+        >
           Tambah Stempel
         </Button>
       </div>

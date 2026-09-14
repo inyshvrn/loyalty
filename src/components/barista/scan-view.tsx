@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Camera, Search } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { QrScanner } from "@/components/barista/qr-scanner";
 import { CustomerStatusCard } from "@/components/barista/customer-status-card";
 import {
@@ -22,6 +23,14 @@ export function ScanView() {
   const [searched, setSearched] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<CustomerStatus | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(true);
+
+  function resetScan() {
+    setScanResult(null);
+    setScanError(null);
+    setScanning(true);
+  }
 
   function updateStatusEverywhere(data: CustomerStatus) {
     setResults((prev) => prev.map((r) => (r.id === data.id ? data : r)));
@@ -87,11 +96,13 @@ export function ScanView() {
   }
 
   async function handleDecode(customerId: string) {
-    if (busyId) return; // ignore repeat decodes while a request is in flight
+    if (!scanning || busyId) return; // one decode per scan session
+    setScanning(false); // stop the camera immediately so it can't re-fire on the same QR
     setBusyId(customerId);
     try {
       const res = await addStampAction(customerId);
       if (!res.ok) {
+        setScanError(res.error);
         toast.error(res.error);
         return;
       }
@@ -104,6 +115,7 @@ export function ScanView() {
         toast.info(res.reason, { description: res.data.name });
       }
     } catch {
+      setScanError("Terjadi kesalahan. Coba lagi.");
       toast.error("Terjadi kesalahan. Coba lagi.");
     } finally {
       setBusyId(null);
@@ -131,14 +143,26 @@ export function ScanView() {
         </TabsList>
 
         <TabsContent value="scan" className="mt-4 flex flex-col gap-3">
-          {tab === "scan" && <QrScanner onDecode={handleDecode} />}
-          {scanResult && (
-            <CustomerStatusCard
-              status={scanResult}
-              busy={busyId === scanResult.id}
-              onAddStamp={() => handleAddStamp(scanResult.id)}
-              onConfirmReward={() => handleConfirmReward(scanResult.id)}
-            />
+          {tab === "scan" && scanning && <QrScanner onDecode={handleDecode} />}
+          {!scanning && (
+            <>
+              {scanResult && (
+                <CustomerStatusCard
+                  status={scanResult}
+                  busy={busyId === scanResult.id}
+                  onAddStamp={() => handleAddStamp(scanResult.id)}
+                  onConfirmReward={() => handleConfirmReward(scanResult.id)}
+                />
+              )}
+              {scanError && (
+                <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  {scanError}
+                </p>
+              )}
+              <Button type="button" variant="outline" onClick={resetScan}>
+                Scan Lagi
+              </Button>
+            </>
           )}
         </TabsContent>
 

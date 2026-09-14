@@ -24,6 +24,7 @@ export type CustomerStatus = {
   name: string;
   email: string;
   phone: string | null;
+  emailVerified: boolean;
   stamps: number;
   threshold: number;
   eligible: boolean;
@@ -40,6 +41,7 @@ async function buildCustomerStatus(customer: User): Promise<CustomerStatus> {
     name: customer.name,
     email: customer.email,
     phone: customer.phone,
+    emailVerified: customer.emailVerified,
     stamps,
     threshold,
     eligible: stamps >= threshold,
@@ -86,6 +88,16 @@ export async function addStampAction(customerId: string): Promise<AddStampResult
     return {
       ok: false,
       error: "Pelanggan tidak ditemukan. Pastikan QR valid atau coba cari manual.",
+    };
+  }
+
+  if (!customer.emailVerified) {
+    const data = await buildCustomerStatus(customer);
+    return {
+      ok: true,
+      stampAdded: false,
+      reason: "Pelanggan belum verifikasi email — belum bisa dapat stempel.",
+      data,
     };
   }
 
