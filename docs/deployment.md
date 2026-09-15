@@ -60,6 +60,35 @@ To finish this:
 No barista account was seeded. Once logged in as admin, create one directly
 in the UI: `/admin/baristas` → "Tambah Barista".
 
+## Database backups
+
+Prisma Postgres's free tier has no automatic backups. Until the project is on
+a paid tier (Starter+ gets daily managed backups), `scripts/backup-db.mjs`
+is a manual stand-in: it dumps every row from every table into one timestamped
+JSON file under `backups/` (gitignored — it's real customer data).
+
+Setup (once):
+1. Copy `scripts/backup.env.example` to `.env.backup` in the project root.
+2. Fill in `DATABASE_URL` with the **direct** `postgres://` connection string
+   from console.prisma.io → the project → Database → Connect (not the
+   `prisma+postgres://` one Vercel uses — the backup script talks to Postgres
+   directly via the `pg` driver).
+
+Run manually: `node scripts/backup-db.mjs`. To automate it, register a daily
+Windows Task Scheduler task that runs that command — see the scheduling
+setup for the exact task name/time if it's already configured on this
+machine.
+
+To restore: point `DATABASE_URL` in `.env.backup` at a **fresh, empty**
+database (run `prisma migrate deploy` against it first so the schema exists),
+then `node scripts/restore-db.mjs backups/backup-<timestamp>.json`. It
+refuses to run if any target table already has rows, so it can't silently
+clobber live data.
+
+This only covers data that changes: `prisma/schema.prisma` and the
+`prisma/migrations/` history already live in git, so restoring the schema
+itself doesn't depend on these dumps at all.
+
 ## If the database ever needs re-pointing
 
 `DATABASE_URL` on Vercel is the only thing that matters for where production
