@@ -37,7 +37,9 @@ Milestone 7 was a manual/live-browser testing pass across roles and edge cases (
 - Three roles share one login form; redirect after auth is role-based (customer / barista / admin), enforced via `src/proxy.ts` (Next.js 16 renamed Middleware to Proxy).
 - Business rule: 1 scan = 1 stamp, max 1 stamp per customer per day.
 - On reaching the configurable threshold N, the customer becomes "eligible"; a barista must explicitly confirm the reward was given before the stamp count resets to 0. Every claim is logged (history is never deleted), and admins can manually adjust a stamp count or cancel a claim to correct barista mistakes.
-- Deferred to a later phase (do not build unless asked) — see `docs/product-requirements.md` for detail on each: historical data import, deeper CRM (per-item tracking, visit-frequency stats), barista-level stamp/claim correction, purchase-prediction/churn modeling, admin data export, automated WhatsApp/email notifications, multi-outlet support.
+- Multi-outlet: admins manage outlets under Admin → Outlet. A barista's outlet assignment (`User.outletId`) persists in the DB, but *confirmation* that it's still correct is session-scoped — the `outletConfirmed` JWT flag resets to `false` on every fresh sign-in, and `src/proxy.ts` redirects any barista route to `/scan/pilih-outlet` until they confirm, so switching branches between shifts doesn't silently misattribute stamps.
+- Admin-created ("migrated") customer accounts never get an admin-set password — `migrateCustomerAction` hashes a random, unusable value, and the customer claims real access later via the normal "Lupa kata sandi?" flow.
+- Deferred to a later phase (do not build unless asked) — see `docs/product-requirements.md` for detail on each: historical data import, deeper CRM (per-item tracking, visit-frequency stats), barista-level stamp/claim correction, purchase-prediction/churn modeling, automated WhatsApp/email notifications.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

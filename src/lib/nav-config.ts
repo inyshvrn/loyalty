@@ -1,5 +1,14 @@
 import type { LucideIcon } from "lucide-react";
-import { Home, QrCode, History, Users, User, Settings, Store } from "lucide-react";
+import {
+  Home,
+  QrCode,
+  History,
+  Users,
+  User,
+  Settings,
+  Store,
+  ClipboardCheck,
+} from "lucide-react";
 
 export type NavItem = {
   href: string;
@@ -17,5 +26,6 @@ export const adminNav: NavItem[] = [
   { href: "/admin/customers", label: "Pelanggan", icon: Users },
   { href: "/admin/baristas", label: "Barista", icon: User },
   { href: "/admin/outlets", label: "Outlet", icon: Store },
+  { href: "/admin/stamp-requests", label: "Persetujuan", icon: ClipboardCheck },
   { href: "/admin/settings", label: "Pengaturan", icon: Settings },
 ];

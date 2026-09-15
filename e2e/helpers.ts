@@ -91,6 +91,37 @@ export async function login(page: Page, email: string, password: string) {
   });
 }
 
+/** Baristas land on /scan/pilih-outlet after every fresh sign-in (see
+ * proxy.ts) and can't reach /scan until they confirm one — tests that act as
+ * a barista must clear that gate before interacting with the scan page.
+ *
+ * Deliberately keyed off rendered content (headings), not `page.url()`: the
+ * App Router updates the URL bar as soon as a client-side transition starts,
+ * which can land a moment before the redirected page's content has actually
+ * streamed in — reading the url string right after `login()` is racy.
+ */
+export async function loginBarista(page: Page, email: string, password: string) {
+  await login(page, email, password);
+
+  const outletHeading = page.getByRole("heading", { name: "Kamu lagi di outlet mana?" });
+  const scanHeading = page.getByRole("heading", { name: "Scan Pelanggan" });
+  await Promise.race([
+    outletHeading.waitFor({ state: "visible", timeout: 10_000 }),
+    scanHeading.waitFor({ state: "visible", timeout: 10_000 }),
+  ]);
+
+  if (!(await outletHeading.isVisible())) return;
+
+  const outletCard = page.locator('[role="button"]').first();
+  if ((await outletCard.count()) > 0) {
+    await outletCard.click();
+    await page.getByRole("button", { name: "Konfirmasi" }).click();
+  } else {
+    await page.getByRole("button", { name: "Lanjut ke Scan" }).click();
+  }
+  await scanHeading.waitFor({ state: "visible", timeout: 10_000 });
+}
+
 /** Best-effort cleanup — tests create their own users with unique
  * emails/phones, so leftovers from a failed run don't break future runs,
  * but deleting them keeps the dev database from accumulating cruft. */

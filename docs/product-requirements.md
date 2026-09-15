@@ -55,7 +55,33 @@ Digitize the loyalty program: each customer gets an account with a persistent pe
 
 ## Deferred (explicitly out of scope for MVP)
 
-- Importing historical purchase data from CSV/XLSX
-- Tracking specific items purchased per visit / deeper CRM
+- **Importing historical purchase data from CSV/XLSX** (pre-app paper
+  punch-card history) — should be feasible without breaking the derived
+  stamp-progress model (`getCustomerProgressWithThreshold` just counts `Stamp`
+  rows since the last claim, so backdated rows work), but needs an explicit
+  "imported" marker and an idempotency safeguard so re-running an import
+  can't double-count stamps.
+- **Deeper CRM**: per-item purchase tracking, visit-frequency/recency stats
+  per customer (e.g. "biasanya balik tiap N hari"), a richer admin-facing
+  customer profile beyond the current stamp/claim history list.
+- **Barista-level stamp/claim correction**: today, fixing a mistaken scan or
+  claim (`addManualStampAction`, `removeStampAction`, `cancelClaimAction` in
+  `src/lib/actions/admin.ts`) is admin-only. Idea raised: let a barista
+  cancel/adjust an over-scan themselves with a confirm step, instead of
+  needing an admin. Needs a decision on how much unsupervised correction
+  power baristas should have before building.
+- **Purchase-prediction / churn modeling**: use visit history to estimate
+  when a customer is likely to come back (or has gone quiet), to prioritize
+  outreach. Raised as an idea (previously explored via ML); no approach
+  chosen yet.
 - Automated notifications (WhatsApp/email) when a customer becomes eligible
-- Multi-outlet support
+  — see `docs/deployment.md` for the current email-verification-only
+  Resend setup; WhatsApp specifically would need the WhatsApp Business
+  Platform (Meta Business verification + an approved message provider), not
+  just an API key like Resend.
+
+Built since the original MVP scope (no longer deferred): admin data export
+(CSV/XLSX/PDF, see `src/lib/actions/admin.ts`), and multi-outlet support —
+admins manage outlets under Admin → Outlet, baristas confirm which outlet
+they're at once per login (`src/app/(barista)/scan/pilih-outlet/`), and each
+stamp records the outlet it was given at.

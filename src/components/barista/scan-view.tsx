@@ -152,6 +152,7 @@ export function ScanView() {
                   busy={busyId === scanResult.id}
                   onAddStamp={() => handleAddStamp(scanResult.id)}
                   onConfirmReward={() => handleConfirmReward(scanResult.id)}
+                  onGrantRequested={updateStatusEverywhere}
                 />
               )}
               {scanError && (
@@ -195,6 +196,7 @@ export function ScanView() {
                   busy={busyId === result.id}
                   onAddStamp={() => handleAddStamp(result.id)}
                   onConfirmReward={() => handleConfirmReward(result.id)}
+                  onGrantRequested={updateStatusEverywhere}
                 />
               ))}
           </div>

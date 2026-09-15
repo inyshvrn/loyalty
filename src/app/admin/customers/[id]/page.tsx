@@ -18,6 +18,7 @@ import { CancelClaimButton } from "@/components/admin/cancel-claim-button";
 import { EditCustomerDialog } from "@/components/admin/edit-customer-dialog";
 import { DeleteCustomerButton } from "@/components/admin/delete-customer-button";
 import { ViewQrDialog } from "@/components/admin/view-qr-dialog";
+import { GrantInitialStampsDialog } from "@/components/admin/grant-initial-stamps-dialog";
 
 export default async function AdminCustomerDetailPage(
   props: PageProps<"/admin/customers/[id]">
@@ -30,10 +31,11 @@ export default async function AdminCustomerDetailPage(
   }
 
   const threshold = await getStampThreshold();
-  const [progress, stamps, claims] = await Promise.all([
+  const [progress, stamps, claims, everStampCount] = await Promise.all([
     getCustomerProgressWithThreshold(id, threshold),
     getRecentStampsWithStaff(id, 30),
     getRecentClaimsWithStaff(id, 30),
+    prisma.stamp.count({ where: { customerId: id } }),
   ]);
 
   let qrDataUrl: string | null = null;
@@ -89,8 +91,9 @@ export default async function AdminCustomerDetailPage(
         </div>
       </div>
 
-      <div className="mb-8">
+      <div className="mb-8 flex flex-wrap gap-2">
         <AddManualStampButton customerId={id} />
+        {everStampCount === 0 && <GrantInitialStampsDialog customerId={id} />}
       </div>
 
       <div className="mb-8">

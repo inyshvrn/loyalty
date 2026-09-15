@@ -52,6 +52,20 @@ export default auth((req) => {
     );
   }
 
+  // Baristas confirm which outlet they're working at once per login —
+  // reset to unconfirmed on every fresh sign-in (see auth.config.ts) — so
+  // every scan is attributed correctly even if they've switched branches
+  // since their last shift.
+  const isOutletPicker = pathname === "/scan/pilih-outlet";
+  if (
+    isBaristaRoute &&
+    role === "BARISTA" &&
+    !session.user.outletConfirmed &&
+    !isOutletPicker
+  ) {
+    return NextResponse.redirect(new URL("/scan/pilih-outlet", req.nextUrl.origin));
+  }
+
   return NextResponse.next();
 });
 

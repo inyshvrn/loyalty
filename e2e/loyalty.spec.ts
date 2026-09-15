@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createUser, login, cleanupUser, withClient } from "./helpers";
+import { createUser, loginBarista, cleanupUser, withClient } from "./helpers";
 
 async function getStampThreshold(): Promise<number> {
   return withClient(async (client) => {
@@ -35,8 +35,7 @@ test.describe("core loyalty flow", () => {
     // Seed threshold-1 stamps so the one real scan below pushes them over.
     await seedBackdatedStamps(customer.id, barista.id, threshold - 1);
 
-    await login(page, barista.email, "BaristaPass123!");
-    await page.goto("/scan", { waitUntil: "networkidle" });
+    await loginBarista(page, barista.email, "BaristaPass123!");
     await page.click('button:has-text("Cari Manual")');
     await page.fill('input[placeholder*="Cari nama"]', customer.email);
     await page.keyboard.press("Enter");
@@ -73,8 +72,7 @@ test.describe("core loyalty flow", () => {
       emailVerified: false,
     });
 
-    await login(page, barista.email, "BaristaPass123!");
-    await page.goto("/scan", { waitUntil: "networkidle" });
+    await loginBarista(page, barista.email, "BaristaPass123!");
     await page.click('button:has-text("Cari Manual")');
     await page.fill('input[placeholder*="Cari nama"]', customer.email);
     await page.keyboard.press("Enter");

@@ -148,6 +148,38 @@ export type ActivityEntry =
       status: "CONFIRMED" | "CANCELLED";
     };
 
+export function countPendingStampGrantRequests() {
+  return prisma.stampGrantRequest.count({ where: { status: "PENDING" } });
+}
+
+/** Pending requests first (oldest first, so the queue clears in submission
+ * order), then a recent slice of already-reviewed ones for context. */
+export async function getStampGrantRequests(reviewedLimit = 20) {
+  const [pending, reviewed] = await Promise.all([
+    prisma.stampGrantRequest.findMany({
+      where: { status: "PENDING" },
+      orderBy: { createdAt: "asc" },
+      include: {
+        customer: { select: { id: true, name: true, email: true } },
+        requestedByUser: { select: { name: true, role: true } },
+        outlet: { select: { name: true } },
+      },
+    }),
+    prisma.stampGrantRequest.findMany({
+      where: { NOT: { status: "PENDING" } },
+      orderBy: { reviewedAt: "desc" },
+      take: reviewedLimit,
+      include: {
+        customer: { select: { id: true, name: true, email: true } },
+        requestedByUser: { select: { name: true, role: true } },
+        reviewedByAdmin: { select: { name: true } },
+        outlet: { select: { name: true } },
+      },
+    }),
+  ]);
+  return { pending, reviewed };
+}
+
 export async function getRecentActivity(limit = 10): Promise<ActivityEntry[]> {
   const [stamps, claims] = await Promise.all([
     prisma.stamp.findMany({

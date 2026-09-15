@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
-import { UserPlus } from "lucide-react";
+import { toast } from "sonner";
+import { Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -16,10 +16,17 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { FormMessage } from "@/components/auth/form-message";
-import { migrateCustomerAction } from "@/lib/actions/admin";
+import { requestInitialStampGrantAction, type CustomerStatus } from "@/lib/actions/barista";
 
-export function MigrateCustomerDialog() {
-  const router = useRouter();
+export function RequestInitialGrantDialog({
+  customerId,
+  customerName,
+  onRequested,
+}: {
+  customerId: string;
+  customerName: string;
+  onRequested: (data: CustomerStatus) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -30,13 +37,18 @@ export function MigrateCustomerDialog() {
     setError(undefined);
     const formData = new FormData(e.currentTarget);
     try {
-      const result = await migrateCustomerAction(null, formData);
-      if (result?.error) {
-        setError(result.error);
+      const res = await requestInitialStampGrantAction(
+        customerId,
+        Number(formData.get("count")),
+        String(formData.get("note") ?? "")
+      );
+      if (!res.ok) {
+        setError(res.error);
         return;
       }
+      onRequested(res.data);
+      toast.success("Ajuan dikirim — menunggu approval admin.");
       setOpen(false);
-      router.refresh();
     } finally {
       setPending(false);
     }
@@ -51,55 +63,39 @@ export function MigrateCustomerDialog() {
       }}
     >
       <DialogTrigger render={<Button type="button" size="sm" variant="outline" />}>
-        <UserPlus className="size-4" />
-        Daftarkan Pelanggan Lama
+        <Gift className="size-4" />
+        Stempel Awal
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Daftarkan Pelanggan Lama</DialogTitle>
+          <DialogTitle>Ajukan Stempel Awal</DialogTitle>
           <DialogDescription>
-            Buat akun berikut progres awal buat pelanggan yang pindah dari
-            kartu kertas — akun langsung aktif dan terverifikasi. Belum ada
-            kata sandi; pelanggan mengaturnya sendiri lewat &quot;Lupa kata
-            sandi?&quot; di halaman masuk kapan pun mereka siap.
+            Untuk {customerName} yang transfer dari kartu kertas lama. Cek
+            dulu kartu fisiknya — jumlah ini baru aktif setelah admin
+            menyetujui, bukan langsung sekarang.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <FormMessage error={error} />
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="migrate-name">Nama</Label>
-            <Input id="migrate-name" name="name" required />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="migrate-email">Email</Label>
-            <Input id="migrate-email" name="email" type="email" required />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="migrate-phone">Nomor HP</Label>
+            <Label htmlFor="req-count">Jumlah stempel di kartu lama</Label>
             <Input
-              id="migrate-phone"
-              name="phone"
-              placeholder="08xxxxxxxxxx"
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="migrate-stamps">
-              Jumlah stempel awal (dari kartu kertas)
-            </Label>
-            <Input
-              id="migrate-stamps"
-              name="initialStamps"
+              id="req-count"
+              name="count"
               type="number"
-              min={0}
-              max={999}
-              defaultValue={0}
+              min={2}
+              max={200}
+              defaultValue={2}
               required
             />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="req-note">Catatan (opsional)</Label>
+            <Input id="req-note" name="note" maxLength={300} />
           </div>
           <DialogFooter>
             <Button type="submit" disabled={pending}>
-              {pending ? "Menyimpan..." : "Daftarkan"}
+              {pending ? "Mengirim..." : "Ajukan"}
             </Button>
           </DialogFooter>
         </form>

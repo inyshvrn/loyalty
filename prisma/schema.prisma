@@ -28,6 +28,8 @@ model Outlet {
 
   baristas User[]  @relation("BaristaOutlet")
   stamps   Stamp[] @relation("StampOutlet")
+
+  stampGrantRequests StampGrantRequest[] @relation("StampGrantRequestOutlet")
 }
 
 model User {
@@ -54,6 +56,10 @@ model User {
   claimsReceived  RewardClaim[] @relation("CustomerClaims")
   claimsConfirmed RewardClaim[] @relation("BaristaConfirmedClaims")
   claimsCancelled RewardClaim[] @relation("AdminCancelledClaims")
+
+  stampGrantRequestsReceived  StampGrantRequest[] @relation("StampGrantRequestCustomer")
+  stampGrantRequestsRequested StampGrantRequest[] @relation("StampGrantRequestRequestedBy")
+  stampGrantRequestsReviewed  StampGrantRequest[] @relation("StampGrantRequestReviewedBy")
 }
 
 /// One row per QR scan. Current progress toward the threshold is derived —
@@ -102,4 +108,39 @@ model LoyaltySetting {
   id             Int      @id @default(1)
   stampThreshold Int      @default(7)
   updatedAt      DateTime @updatedAt
+}
+
+enum StampGrantStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// A request to backfill several stamps at once for a customer's very first
+/// visit — for someone transferring stamps from an old paper punch card who
+/// self-registered instead of being migrated in by an admin. Only allowed
+/// while the customer has zero Stamp rows ever (checked in the action, not
+/// enforced here), so it can't become a backdoor for extra stamps later.
+/// A barista-submitted request needs an admin's approval before the stamps
+/// are actually created; an admin-submitted one is auto-approved (they don't
+/// need to approve their own request) but still recorded here for the same
+/// audit trail.
+model StampGrantRequest {
+  id                 String            @id @default(cuid())
+  customerId         String
+  customer           User              @relation("StampGrantRequestCustomer", fields: [customerId], references: [id])
+  count              Int
+  note               String?
+  requestedByUserId  String
+  requestedByUser    User              @relation("StampGrantRequestRequestedBy", fields: [requestedByUserId], references: [id])
+  outletId           String?
+  outlet             Outlet?           @relation("StampGrantRequestOutlet", fields: [outletId], references: [id])
+  status             StampGrantStatus  @default(PENDING)
+  createdAt          DateTime          @default(now())
+  reviewedByAdminId  String?
+  reviewedByAdmin    User?             @relation("StampGrantRequestReviewedBy", fields: [reviewedByAdminId], references: [id])
+  reviewedAt         DateTime?
+
+  @@index([customerId])
+  @@index([status])
 }

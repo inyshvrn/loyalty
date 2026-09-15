@@ -267,7 +267,6 @@ const migrateCustomerSchema = z.object({
   name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
   email: z.string().trim().toLowerCase().email("Format email tidak valid"),
   phone: phoneSchema,
-  password: z.string().min(8, "Kata sandi minimal 8 karakter"),
   initialStamps: z.coerce.number().int().min(0, "Tidak boleh negatif").max(999),
 });
 
@@ -281,13 +280,12 @@ export async function migrateCustomerAction(
     name: formData.get("name"),
     email: formData.get("email"),
     phone: formData.get("phone"),
-    password: formData.get("password"),
     initialStamps: formData.get("initialStamps"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
   }
-  const { name, email, phone, password, initialStamps } = parsed.data;
+  const { name, email, phone, initialStamps } = parsed.data;
 
   const emailTaken = await prisma.user.findUnique({ where: { email } });
   if (emailTaken) {
@@ -298,7 +296,10 @@ export async function migrateCustomerAction(
     return { error: "Nomor HP ini sudah terdaftar di akun lain." };
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  // No password set here — nobody but the customer should know it. They
+  // claim the account later via "Lupa kata sandi?" (same flow as any other
+  // password reset), which sets a real password only they know.
+  const passwordHash = await bcrypt.hash(crypto.randomUUID() + crypto.randomUUID(), 12);
   const customer = await prisma.user.create({
     data: {
       name,
@@ -473,5 +474,134 @@ export async function cancelClaimAction(claimId: string): Promise<CorrectionResu
   });
 
   revalidatePath(`/admin/customers/${claim.customerId}`);
+  return { ok: true };
+}
+
+// ---- Initial stamp grants (physical card transfer) ----
+
+/** Backdates each stamp to its own day in the past (ending yesterday, never
+ * today) so a bulk historical grant never eats the customer's "1 stamp per
+ * day" slot for an actual visit that happens the same day it's approved. */
+async function createGrantedStamps(
+  customerId: string,
+  scannedByBaristaId: string,
+  outletId: string | null,
+  count: number
+) {
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+  await prisma.stamp.createMany({
+    data: Array.from({ length: count }, (_, i) => ({
+      customerId,
+      scannedByBaristaId,
+      outletId,
+      createdAt: new Date(now - (count - i) * dayMs),
+    })),
+  });
+}
+
+export async function approveStampGrantRequestAction(
+  requestId: string
+): Promise<CorrectionResult> {
+  const admin = await requireAdmin();
+
+  const request = await prisma.stampGrantRequest.findUnique({ where: { id: requestId } });
+  if (!request) {
+    return { ok: false, error: "Ajuan tidak ditemukan." };
+  }
+  if (request.status !== "PENDING") {
+    return { ok: false, error: "Ajuan ini sudah diproses sebelumnya." };
+  }
+
+  await createGrantedStamps(
+    request.customerId,
+    request.requestedByUserId,
+    request.outletId,
+    request.count
+  );
+  await prisma.stampGrantRequest.update({
+    where: { id: requestId },
+    data: { status: "APPROVED", reviewedByAdminId: admin.id, reviewedAt: new Date() },
+  });
+
+  revalidatePath("/admin/stamp-requests");
+  revalidatePath(`/admin/customers/${request.customerId}`);
+  return { ok: true };
+}
+
+export async function rejectStampGrantRequestAction(
+  requestId: string
+): Promise<CorrectionResult> {
+  const admin = await requireAdmin();
+
+  const request = await prisma.stampGrantRequest.findUnique({ where: { id: requestId } });
+  if (!request) {
+    return { ok: false, error: "Ajuan tidak ditemukan." };
+  }
+  if (request.status !== "PENDING") {
+    return { ok: false, error: "Ajuan ini sudah diproses sebelumnya." };
+  }
+
+  await prisma.stampGrantRequest.update({
+    where: { id: requestId },
+    data: { status: "REJECTED", reviewedByAdminId: admin.id, reviewedAt: new Date() },
+  });
+
+  revalidatePath("/admin/stamp-requests");
+  return { ok: true };
+}
+
+const adminInitialGrantSchema = z.object({
+  count: z
+    .coerce.number()
+    .int()
+    .min(2, "Minimal 2 stempel — untuk 1 stempel pakai Tambah Stempel Manual")
+    .max(200, "Maksimal 200 stempel sekali pemberian"),
+  note: z.string().trim().max(300).optional(),
+});
+
+/** Admin equivalent of requestInitialStampGrantAction — takes effect right
+ * away since an admin doesn't need to approve their own request, but still
+ * recorded as an (auto-approved) StampGrantRequest for the same audit trail. */
+export async function adminGrantInitialStampsAction(
+  customerId: string,
+  count: number,
+  note?: string
+): Promise<CorrectionResult> {
+  const admin = await requireAdmin();
+
+  const parsed = adminInitialGrantSchema.safeParse({ count, note });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  }
+
+  const customer = await prisma.user.findUnique({ where: { id: customerId } });
+  if (!customer || customer.role !== "CUSTOMER") {
+    return { ok: false, error: "Pelanggan tidak ditemukan." };
+  }
+
+  const everStampCount = await prisma.stamp.count({ where: { customerId } });
+  if (everStampCount > 0) {
+    return {
+      ok: false,
+      error: "Pelanggan ini sudah pernah dapat stempel — bukan lagi kunjungan pertama.",
+    };
+  }
+
+  await createGrantedStamps(customerId, admin.id, null, parsed.data.count);
+  await prisma.stampGrantRequest.create({
+    data: {
+      customerId,
+      count: parsed.data.count,
+      note: parsed.data.note || null,
+      requestedByUserId: admin.id,
+      status: "APPROVED",
+      reviewedByAdminId: admin.id,
+      reviewedAt: new Date(),
+    },
+  });
+
+  revalidatePath(`/admin/customers/${customerId}`);
+  revalidatePath("/admin/stamp-requests");
   return { ok: true };
 }
