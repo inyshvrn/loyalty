@@ -312,12 +312,10 @@ export async function migrateCustomerAction(
   });
 
   if (initialStamps > 0) {
-    await prisma.stamp.createMany({
-      data: Array.from({ length: initialStamps }, () => ({
-        customerId: customer.id,
-        scannedByBaristaId: admin.id,
-      })),
-    });
+    // Backdated (see createGrantedStamps below) so a real scan later today
+    // — the same day this customer is migrated in — doesn't get blocked by
+    // the "1 stamp per customer per day" rule.
+    await createGrantedStamps(customer.id, admin.id, null, initialStamps);
   }
 
   revalidatePath("/admin/customers");

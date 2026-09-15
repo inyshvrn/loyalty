@@ -34,26 +34,25 @@ against production before/after. `preferredRegion` in Next.js route files is
 deprecated for Vercel and no longer accepts arbitrary region codes — this
 has to be set via `vercel.json`, not application code.
 
-## Outstanding: Resend not configured yet
+## Resend (customer self-registration email)
 
-`RESEND_API_KEY` is **not set** in production. Per the fail-loud design from
-`docs/authentication.md`, `sendVerificationEmail()` throws rather than
-silently no-oping when this is missing in production — so **customer
-self-registration will error out** until this is set. Nothing else is
-affected (staff accounts are created pre-verified and don't need this).
+`RESEND_API_KEY` and `RESEND_FROM_EMAIL` are set in production (marked
+Sensitive on Vercel — their values can't be read back via `vercel env ls`/
+`pull`, only overwritten). The `handaicoffee.my.id` domain is verified in
+Resend, and `RESEND_FROM_EMAIL` is `verifikasi@handaicoffee.my.id`. Confirmed
+working end to end against production (2026-09-15): a real registration
+received the verification email.
 
-To finish this:
-1. Sign up at resend.com (free tier) and create an API key.
-2. Either use the shared sandbox sender (`onboarding@resend.dev` — only
-   delivers to the Resend account's own email, fine for a quick smoke test)
-   or verify a real sending domain for a real "from" address.
-3. Set on Vercel:
-   ```bash
-   vercel env add RESEND_API_KEY production
-   vercel env add RESEND_FROM_EMAIL production
-   ```
-4. Redeploy (`vercel deploy --prod`, or just push to `main` now that Git
-   auto-deploy is connected) so the new env vars take effect.
+If self-registration ever starts erroring again in production, the most
+likely cause is `RESEND_FROM_EMAIL` reverting to the shared sandbox sender
+(`onboarding@resend.dev`) — Resend restricts that sender to only deliver to
+the Resend account's own email, so real customers' addresses get rejected
+with a "testing email" validation error (visible in `vercel logs`). Fix:
+```bash
+vercel env rm RESEND_FROM_EMAIL production --yes
+vercel env add RESEND_FROM_EMAIL production   # verifikasi@handaicoffee.my.id
+vercel deploy --prod   # env var changes only apply to a NEW deployment
+```
 
 ## Adding the first barista account
 
