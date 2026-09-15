@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Playwright's generated (gitignored) report/trace output — bundled,
+    // minified JS that isn't meant to be linted.
+    "playwright-report/**",
+    "test-results/**",
   ]),
 ]);
 
