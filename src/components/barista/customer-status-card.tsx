@@ -66,7 +66,7 @@ export function CustomerStatusCard({
         <Button
           size="sm"
           type="button"
-          disabled={busy || !status.emailVerified}
+          disabled={busy || !status.emailVerified || status.stamps > status.threshold}
           onClick={onAddStamp}
         >
           Tambah Stempel

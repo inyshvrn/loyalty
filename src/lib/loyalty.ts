@@ -8,13 +8,18 @@ export async function getStampThreshold(): Promise<number> {
   return setting?.stampThreshold ?? DEFAULT_STAMP_THRESHOLD;
 }
 
-/** Most recent confirmed claim — a cancelled claim doesn't count as a reset. */
-export async function getLastConfirmedClaimAt(customerId: string): Promise<Date | null> {
+/** Where current-cycle progress starts counting from — the most recent
+ * confirmed claim's progressCutoffAt (a cancelled claim doesn't count as a
+ * reset). Usually the claim's own timestamp, but backdated to the
+ * threshold-th stamp when that claim was delayed past the threshold by one
+ * grace stamp, so that extra stamp still counts toward this cycle instead
+ * of having been silently discarded. */
+export async function getProgressCutoff(customerId: string): Promise<Date | null> {
   const last = await prisma.rewardClaim.findFirst({
     where: { customerId, status: "CONFIRMED" },
     orderBy: { claimedAt: "desc" },
   });
-  return last?.claimedAt ?? null;
+  return last?.progressCutoffAt ?? null;
 }
 
 export async function getStampCountSince(
@@ -40,7 +45,7 @@ export async function getCustomerProgressWithThreshold(
   customerId: string,
   threshold: number
 ): Promise<CustomerProgress> {
-  const lastClaimAt = await getLastConfirmedClaimAt(customerId);
+  const lastClaimAt = await getProgressCutoff(customerId);
   const stamps = await getStampCountSince(customerId, lastClaimAt);
   return { stamps, threshold, eligible: stamps >= threshold, lastClaimAt };
 }

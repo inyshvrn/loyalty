@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { auth, unstable_update } from "@/lib/auth";
 import {
   getStampThreshold,
-  getLastConfirmedClaimAt,
+  getProgressCutoff,
   getStampCountSince,
 } from "@/lib/loyalty";
 import { getStoreDayBounds, formatStoreTime } from "@/lib/store-time";
@@ -60,7 +60,7 @@ export type CustomerStatus = {
 async function buildCustomerStatus(customer: User): Promise<CustomerStatus> {
   const [threshold, lastClaimAt, everStampCount, pendingGrant] = await Promise.all([
     getStampThreshold(),
-    getLastConfirmedClaimAt(customer.id),
+    getProgressCutoff(customer.id),
     prisma.stamp.count({ where: { customerId: customer.id } }),
     prisma.stampGrantRequest.findFirst({
       where: { customerId: customer.id, status: "PENDING" },
@@ -150,6 +150,25 @@ export async function addStampAction(customerId: string): Promise<AddStampResult
     };
   }
 
+  // Allow exactly one grace stamp past the threshold (so a customer who
+  // returns before claiming isn't turned away) — beyond that, further
+  // stamps must wait until the reward is confirmed, or they'd just be lost
+  // when progress resets on claim.
+  const [threshold, cutoff] = await Promise.all([
+    getStampThreshold(),
+    getProgressCutoff(customerId),
+  ]);
+  const stampsSoFar = await getStampCountSince(customerId, cutoff);
+  if (stampsSoFar > threshold) {
+    const data = await buildCustomerStatus(customer);
+    return {
+      ok: true,
+      stampAdded: false,
+      reason: "Pelanggan sudah siap klaim reward (+1 stempel bonus) — konfirmasi reward-nya dulu sebelum nambah stempel lagi.",
+      data,
+    };
+  }
+
   const scanningBarista = await prisma.user.findUnique({
     where: { id: barista.id },
     select: { outletId: true },
@@ -181,21 +200,35 @@ export async function confirmRewardAction(
     return { ok: false, error: "Pelanggan tidak ditemukan." };
   }
 
-  const [threshold, lastClaimAt] = await Promise.all([
+  const [threshold, cutoff] = await Promise.all([
     getStampThreshold(),
-    getLastConfirmedClaimAt(customerId),
+    getProgressCutoff(customerId),
   ]);
-  const stamps = await getStampCountSince(customerId, lastClaimAt);
+  // Fetch the oldest `threshold` stamps since the cutoff (ascending) rather
+  // than just a count — the last one in that set is the threshold-th stamp,
+  // whose createdAt becomes the new progressCutoffAt. Anything after it
+  // (the one allowed grace stamp, if the claim was delayed) stays uncounted
+  // here and carries over to the next cycle instead of being lost.
+  const stampsSinceCutoff = await prisma.stamp.findMany({
+    where: { customerId, ...(cutoff ? { createdAt: { gt: cutoff } } : {}) },
+    orderBy: { createdAt: "asc" },
+    take: threshold,
+  });
 
-  if (stamps < threshold) {
+  if (stampsSinceCutoff.length < threshold) {
     return {
       ok: false,
       error: "Pelanggan belum mencapai jumlah stempel yang cukup.",
     };
   }
+  const thresholdStamp = stampsSinceCutoff[threshold - 1];
 
   await prisma.rewardClaim.create({
-    data: { customerId, confirmedByBaristaId: barista.id },
+    data: {
+      customerId,
+      confirmedByBaristaId: barista.id,
+      progressCutoffAt: thresholdStamp.createdAt,
+    },
   });
 
   const data = await buildCustomerStatus(customer);

@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getStoreDayBounds, formatStoreTime } from "@/lib/store-time";
+import { getStampThreshold, getProgressCutoff, getStampCountSince } from "@/lib/loyalty";
 import { phoneSchema } from "@/lib/validators";
 
 async function requireAdmin() {
@@ -428,6 +429,21 @@ export async function addManualStampAction(customerId: string): Promise<Correcti
     return {
       ok: false,
       error: `Pelanggan ini sudah dapat stempel hari ini pukul ${formatStoreTime(existing.createdAt)}.`,
+    };
+  }
+
+  // Same one-grace-stamp cap as the barista scan flow — beyond that, any
+  // more stamps would just be lost when the customer's reward is claimed.
+  const [threshold, cutoff] = await Promise.all([
+    getStampThreshold(),
+    getProgressCutoff(customerId),
+  ]);
+  const stampsSoFar = await getStampCountSince(customerId, cutoff);
+  if (stampsSoFar > threshold) {
+    return {
+      ok: false,
+      error:
+        "Pelanggan ini sudah siap klaim reward (+1 stempel bonus) — konfirmasi reward dulu sebelum nambah stempel lagi.",
     };
   }
 

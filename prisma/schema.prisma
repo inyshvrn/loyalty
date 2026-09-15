@@ -96,6 +96,13 @@ model RewardClaim {
   confirmedByBarista   User              @relation("BaristaConfirmedClaims", fields: [confirmedByBaristaId], references: [id])
   status               RewardClaimStatus @default(CONFIRMED)
   claimedAt            DateTime          @default(now())
+  /// The cutoff the NEXT cycle's progress is counted from — normally the
+  /// same moment as claimedAt, but if the customer had already earned one
+  /// stamp beyond the threshold before this claim was confirmed (a delayed
+  /// claim), it's backdated to the createdAt of the threshold-th stamp
+  /// instead, so that one grace stamp still counts toward their next reward
+  /// rather than being silently lost when progress resets.
+  progressCutoffAt     DateTime
   cancelledAt          DateTime?
   cancelledByAdminId   String?
   cancelledByAdmin     User?             @relation("AdminCancelledClaims", fields: [cancelledByAdminId], references: [id])
