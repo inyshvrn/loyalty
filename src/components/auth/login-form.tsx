@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/auth/form-message";
 import { loginAction, type ActionState } from "@/lib/actions/auth";
@@ -28,10 +29,9 @@ export function LoginForm() {
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="password">Kata sandi</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           placeholder="••••••••"
           required
         />

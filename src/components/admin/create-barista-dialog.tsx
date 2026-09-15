@@ -6,6 +6,7 @@ import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import {
   Select,
   SelectContent,
@@ -88,10 +89,9 @@ export function CreateBaristaDialog({
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="barista-password">Kata sandi awal</Label>
-            <Input
+            <PasswordInput
               id="barista-password"
               name="password"
-              type="password"
               minLength={8}
               required
             />

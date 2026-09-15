@@ -6,6 +6,7 @@ import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import {
   Select,
   SelectContent,
@@ -111,10 +112,9 @@ export function EditBaristaDialog({
             <Label htmlFor={`edit-barista-password-${userId}`}>
               Kata sandi baru (opsional)
             </Label>
-            <Input
+            <PasswordInput
               id={`edit-barista-password-${userId}`}
               name="password"
-              type="password"
               minLength={8}
               placeholder="Kosongkan jika tidak diubah"
             />
