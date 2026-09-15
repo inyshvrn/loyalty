@@ -26,7 +26,14 @@ export function BottomTabs({ items }: { items: NavItem[] }) {
               active && "text-primary"
             )}
           >
-            <Icon className="size-5" strokeWidth={active ? 2.25 : 2} />
+            <span
+              className={cn(
+                "flex size-8 items-center justify-center rounded-full transition-colors",
+                active && "bg-primary/15"
+              )}
+            >
+              <Icon className="size-5" strokeWidth={active ? 2.25 : 2} />
+            </span>
             {item.label}
           </Link>
         );

@@ -28,7 +28,7 @@ export function LoyaltyCard({
         eligible && "ring-2 ring-reward ring-offset-2 ring-offset-background"
       )}
     >
-      <BrandWatermark className="-right-12 -bottom-14 size-56 bg-white/10" />
+      <BrandWatermark className="-right-12 -bottom-14 size-56 bg-white/14" />
 
       <div className="relative z-10">
         <div className="flex items-start justify-between gap-2">
