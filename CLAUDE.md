@@ -28,15 +28,16 @@ Full requirements: `docs/product-requirements.md`. Architecture and data model: 
 - `npx prisma studio` — browse/edit the database.
 - `npm run db:seed` — seed dev barista/admin accounts (see `docs/authentication.md`).
 - `npx prisma dev` — start a local Postgres instance if not using a hosted `DATABASE_URL`.
+- `npm run test:e2e` — Playwright end-to-end suite (`e2e/`) against `npm run dev`; needs the local dev DB running. `test:e2e:ui` opens Playwright's UI mode.
 
-No automated testing framework is in use — Milestone 7 was a manual/live-browser testing pass across roles and edge cases (see commit history), not a checked-in test suite.
+Milestone 7 was a manual/live-browser testing pass across roles and edge cases (see commit history) — that's still how most new features get verified. The `e2e/` suite is a newer, smaller safety net covering the highest-stakes flows (auth, login lockout, password reset, the core scan→eligible→claim path); it's not full coverage of the app, so don't treat a green run as a substitute for actually checking a change in the browser. Test fixtures talk to the dev database directly via `pg` (see `e2e/helpers.ts`) rather than through `@/lib/prisma` — the generated Prisma client is pure ESM (`import.meta`) and doesn't load under Playwright's test transform.
 
 ## Architecture notes for future work
 
 - Three roles share one login form; redirect after auth is role-based (customer / barista / admin), enforced via `src/proxy.ts` (Next.js 16 renamed Middleware to Proxy).
 - Business rule: 1 scan = 1 stamp, max 1 stamp per customer per day.
 - On reaching the configurable threshold N, the customer becomes "eligible"; a barista must explicitly confirm the reward was given before the stamp count resets to 0. Every claim is logged (history is never deleted), and admins can manually adjust a stamp count or cancel a claim to correct barista mistakes.
-- Deferred to a later phase (do not build unless asked): importing historical purchase data from CSV/XLSX, per-item purchase tracking / deeper CRM, automated WhatsApp/email notifications, multi-outlet support.
+- Deferred to a later phase (do not build unless asked) — see `docs/product-requirements.md` for detail on each: historical data import, deeper CRM (per-item tracking, visit-frequency stats), barista-level stamp/claim correction, purchase-prediction/churn modeling, admin data export, automated WhatsApp/email notifications, multi-outlet support.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
