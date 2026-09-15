@@ -82,8 +82,10 @@ async function buildCustomerStatus(customer: User): Promise<CustomerStatus> {
   };
 }
 
-const searchSchema = z.string().trim().min(1).max(100);
+const searchSchema = z.string().trim().max(100);
 
+/** Empty query lists every customer alphabetically instead of nothing, so
+ * the manual-search tab doubles as a browsable directory. */
 export async function searchCustomersAction(
   query: string
 ): Promise<CustomerStatus[]> {
@@ -96,13 +98,17 @@ export async function searchCustomersAction(
   const customers = await prisma.user.findMany({
     where: {
       role: "CUSTOMER",
-      OR: [
-        { name: { contains: q, mode: "insensitive" } },
-        { email: { contains: q, mode: "insensitive" } },
-        { phone: { contains: q } },
-      ],
+      ...(q
+        ? {
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { email: { contains: q, mode: "insensitive" } },
+              { phone: { contains: q } },
+            ],
+          }
+        : {}),
     },
-    take: 8,
+    take: 50,
     orderBy: { name: "asc" },
   });
 
@@ -233,6 +239,32 @@ export async function confirmRewardAction(
 
   const data = await buildCustomerStatus(customer);
   return { ok: true, data };
+}
+
+export type ClaimHistorySummary = {
+  totalClaims: number;
+  lastClaimAt: Date | null;
+};
+
+/** Fetched on demand when a barista opens the confirm-reward dialog — not
+ * part of CustomerStatus, since that's built for every row in a (now up to
+ * 50-long) search list and this would add a query per row for something
+ * only needed for the one customer actually being confirmed. */
+export async function getClaimHistorySummary(
+  customerId: string
+): Promise<ClaimHistorySummary> {
+  await requireBarista();
+
+  const [totalClaims, last] = await Promise.all([
+    prisma.rewardClaim.count({ where: { customerId, status: "CONFIRMED" } }),
+    prisma.rewardClaim.findFirst({
+      where: { customerId, status: "CONFIRMED" },
+      orderBy: { claimedAt: "desc" },
+      select: { claimedAt: true },
+    }),
+  ]);
+
+  return { totalClaims, lastClaimAt: last?.claimedAt ?? null };
 }
 
 // ---- Initial stamp grant (physical card transfer) ----

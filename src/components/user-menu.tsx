@@ -25,8 +25,8 @@ function initials(name: string) {
 export function UserMenu({ name, email }: { name: string; email: string }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2 rounded-lg p-1 outline-none hover:bg-secondary focus-visible:bg-secondary">
-        <Avatar size="sm">
+      <DropdownMenuTrigger className="flex size-11 items-center justify-center gap-2 rounded-lg outline-none hover:bg-secondary focus-visible:bg-secondary">
+        <Avatar>
           <AvatarFallback>{initials(name)}</AvatarFallback>
         </Avatar>
         <span className="sr-only">Menu akun</span>
@@ -45,6 +45,7 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
           <DropdownMenuItem
             variant="destructive"
             nativeButton
+            className="min-h-11 py-2.5 text-base"
             render={<button type="submit" className="w-full" />}
           >
             <LogOut className="size-4" />

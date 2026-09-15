@@ -62,7 +62,7 @@ export function RequestInitialGrantDialog({
         if (next) setError(undefined);
       }}
     >
-      <DialogTrigger render={<Button type="button" size="sm" variant="outline" />}>
+      <DialogTrigger render={<Button type="button" size="sm" variant="outline" className="h-11" />}>
         <Gift className="size-4" />
         Stempel Awal
       </DialogTrigger>

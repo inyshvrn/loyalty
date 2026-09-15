@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -13,6 +13,10 @@ export function LoginForm() {
     loginAction,
     null
   );
+  // Controlled so a failed submit never clears what was typed — a typo in
+  // the email or password shouldn't force retyping everything from scratch.
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -24,6 +28,8 @@ export function LoginForm() {
           name="email"
           type="email"
           placeholder="nama@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
         />
       </div>
@@ -33,10 +39,12 @@ export function LoginForm() {
           id="password"
           name="password"
           placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           required
         />
       </div>
-      <Button className="mt-1" type="submit" disabled={isPending}>
+      <Button className="mt-1 h-11" type="submit" disabled={isPending}>
         {isPending ? "Memproses..." : "Masuk"}
       </Button>
     </form>

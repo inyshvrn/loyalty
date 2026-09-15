@@ -40,7 +40,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
           required
         />
       </div>
-      <Button className="mt-1" type="submit" disabled={isPending}>
+      <Button className="mt-1 h-11" type="submit" disabled={isPending}>
         {isPending ? "Menyimpan..." : "Simpan Kata Sandi Baru"}
       </Button>
     </form>

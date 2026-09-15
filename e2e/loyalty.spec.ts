@@ -47,6 +47,7 @@ test.describe("core loyalty flow", () => {
     await expect(page.getByText("Siap Diklaim")).toBeVisible();
 
     await page.getByRole("button", { name: "Konfirmasi Reward" }).click();
+    await page.getByRole("button", { name: "Konfirmasi" }).click();
     await expect(page.getByText("Reward dikonfirmasi")).toBeVisible();
 
     const claim = await withClient(async (client) => {
