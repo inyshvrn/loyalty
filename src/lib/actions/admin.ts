@@ -138,15 +138,16 @@ export async function deleteBaristaAction(userId: string): Promise<CorrectionRes
     return { ok: false, error: "Akun barista tidak ditemukan." };
   }
 
-  const [stampCount, claimCount] = await Promise.all([
+  const [stampCount, claimCount, grantRequestCount] = await Promise.all([
     prisma.stamp.count({ where: { scannedByBaristaId: userId } }),
     prisma.rewardClaim.count({ where: { confirmedByBaristaId: userId } }),
+    prisma.stampGrantRequest.count({ where: { requestedByUserId: userId } }),
   ]);
-  if (stampCount > 0 || claimCount > 0) {
+  if (stampCount > 0 || claimCount > 0 || grantRequestCount > 0) {
     return {
       ok: false,
       error:
-        "Barista ini sudah punya riwayat scan/klaim — tidak bisa dihapus permanen agar riwayat tetap utuh. Nonaktifkan saja akunnya.",
+        "Barista ini sudah punya riwayat scan/klaim/ajuan stempel awal — tidak bisa dihapus permanen agar riwayat tetap utuh. Nonaktifkan saja akunnya.",
     };
   }
 
@@ -389,15 +390,16 @@ export async function deleteCustomerAction(userId: string): Promise<CorrectionRe
     return { ok: false, error: "Pelanggan tidak ditemukan." };
   }
 
-  const [stampCount, claimCount] = await Promise.all([
+  const [stampCount, claimCount, grantRequestCount] = await Promise.all([
     prisma.stamp.count({ where: { customerId: userId } }),
     prisma.rewardClaim.count({ where: { customerId: userId } }),
+    prisma.stampGrantRequest.count({ where: { customerId: userId } }),
   ]);
-  if (stampCount > 0 || claimCount > 0) {
+  if (stampCount > 0 || claimCount > 0 || grantRequestCount > 0) {
     return {
       ok: false,
       error:
-        "Pelanggan ini sudah punya riwayat stempel/klaim — tidak bisa dihapus permanen agar riwayat tetap utuh.",
+        "Pelanggan ini sudah punya riwayat stempel/klaim/ajuan stempel awal — tidak bisa dihapus permanen agar riwayat tetap utuh.",
     };
   }
 
