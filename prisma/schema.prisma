@@ -43,6 +43,12 @@ model User {
   outletId      String?
   outlet        Outlet?  @relation("BaristaOutlet", fields: [outletId], references: [id])
 
+  /// Reset to 0 on a successful login. Once it crosses the threshold in
+  /// authorize(), lockedUntil is set and further attempts are rejected
+  /// without even checking the password, until it passes.
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
   stampsReceived  Stamp[]       @relation("CustomerStamps")
   stampsScanned   Stamp[]       @relation("BaristaScannedStamps")
   claimsReceived  RewardClaim[] @relation("CustomerClaims")

@@ -16,6 +16,16 @@ class AccountDeactivatedError extends CredentialsSignin {
   code = "account_deactivated";
 }
 
+// After this many failed attempts in a row, the account is locked out for
+// LOCKOUT_DURATION_MS — checked before the password comparison even runs,
+// so it also blocks a *correct* password until the window passes. Rendered
+// as the same generic "wrong credentials" message as InvalidCredentialsError
+// (see loginAction) rather than a distinct "locked" message, so a locked-out
+// account can't be told apart from a wrong password by someone probing
+// emails they don't know are registered.
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
@@ -38,6 +48,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const user = await prisma.user.findUnique({ where: { email } });
 
+        if (user?.lockedUntil && user.lockedUntil > new Date()) {
+          // Rejected before ever touching the password — a correct one
+          // doesn't get through either until the window passes.
+          throw new InvalidCredentialsError();
+        }
+
         // Compare against a dummy hash when the user doesn't exist, so the
         // response time doesn't leak whether the email is registered.
         const hashToCompare =
@@ -46,7 +62,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const passwordMatches = await bcrypt.compare(password, hashToCompare);
 
         if (!user || !passwordMatches) {
+          if (user) {
+            const attempts = user.failedLoginAttempts + 1;
+            await prisma.user.update({
+              where: { id: user.id },
+              data:
+                attempts >= MAX_FAILED_ATTEMPTS
+                  ? {
+                      failedLoginAttempts: 0,
+                      lockedUntil: new Date(Date.now() + LOCKOUT_DURATION_MS),
+                    }
+                  : { failedLoginAttempts: attempts },
+            });
+          }
           throw new InvalidCredentialsError();
+        }
+
+        if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { failedLoginAttempts: 0, lockedUntil: null },
+          });
         }
 
         if (!user.isActive) {

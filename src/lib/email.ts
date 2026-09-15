@@ -40,3 +40,32 @@ export async function sendVerificationEmail(to: string, verifyUrl: string) {
     throw new Error("Failed to send verification email");
   }
 }
+
+export async function sendPasswordResetEmail(to: string, resetUrl: string) {
+  if (!resend) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "RESEND_API_KEY is not set — cannot send password reset email in production."
+      );
+    }
+    console.log(`[dev] Password reset link for ${to}: ${resetUrl}`);
+    return;
+  }
+
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: "Atur ulang kata sandi — Handai Coffee",
+    html: `
+      <p>Halo,</p>
+      <p>Ada permintaan buat atur ulang kata sandi akun Handai Coffee Anda. Klik tautan di bawah untuk membuat kata sandi baru:</p>
+      <p><a href="${resetUrl}">${resetUrl}</a></p>
+      <p>Tautan ini berlaku selama 1 jam dan hanya bisa dipakai sekali. Jika Anda tidak meminta ini, abaikan email ini — kata sandi Anda tidak akan berubah.</p>
+    `,
+  });
+
+  if (error) {
+    console.error("Failed to send password reset email:", error);
+    throw new Error("Failed to send password reset email");
+  }
+}
