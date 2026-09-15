@@ -20,7 +20,7 @@ export function SidebarNav({
   const pathname = usePathname();
 
   return (
-    <aside className="relative hidden w-60 shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar px-3 py-6 md:flex">
+    <aside className="relative hidden w-60 shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-border bg-sidebar px-3 py-6 md:flex">
       <BrandWatermark className="-bottom-16 -left-16 size-64 bg-primary/10" />
       <div className="relative z-10 mb-1 px-2">
         <BrandMark />

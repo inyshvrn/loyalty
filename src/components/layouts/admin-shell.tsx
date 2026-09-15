@@ -55,7 +55,7 @@ export function AdminShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-svh bg-background">
+    <div className="flex h-svh overflow-hidden bg-background">
       <SidebarNav items={adminNav} subtitle="Admin" user={user} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 md:hidden">
@@ -77,7 +77,7 @@ export function AdminShell({
             </Sheet>
           </div>
         </header>
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
   );
