@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { prisma } from "@/lib/prisma";
-import { getStampThreshold, getCustomerProgressWithThreshold } from "@/lib/loyalty";
+import { getStampThreshold, getAllCustomerStampCounts } from "@/lib/loyalty";
 import { MigrateCustomerDialog } from "@/components/admin/migrate-customer-dialog";
 import { ExportCustomersMenu } from "@/components/admin/export-customers-menu";
 
@@ -22,7 +22,7 @@ export default async function AdminCustomersPage(
   const searchParams = await props.searchParams;
   const q = typeof searchParams.q === "string" ? searchParams.q.trim() : "";
 
-  const [threshold, customers] = await Promise.all([
+  const [threshold, customers, stampCounts] = await Promise.all([
     getStampThreshold(),
     prisma.user.findMany({
       where: {
@@ -40,14 +40,13 @@ export default async function AdminCustomersPage(
       orderBy: { name: "asc" },
       take: 100,
     }),
+    getAllCustomerStampCounts(),
   ]);
 
-  const rows = await Promise.all(
-    customers.map(async (c) => ({
-      ...c,
-      progress: await getCustomerProgressWithThreshold(c.id, threshold),
-    }))
-  );
+  const rows = customers.map((c) => {
+    const stamps = stampCounts.get(c.id) ?? 0;
+    return { ...c, progress: { stamps, threshold, eligible: stamps >= threshold } };
+  });
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-10">

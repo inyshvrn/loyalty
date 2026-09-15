@@ -129,18 +129,45 @@ export function getRecentClaimsWithStaff(customerId: string, limit = 10) {
   });
 }
 
-/** Loops all customers to check eligibility — fine at this app's scale (a
- * single coffee shop's customer list), and simpler/more correct than trying
- * to express a per-customer "since last claim" cutoff in one aggregate query. */
+/** Every customer's current stamp count in one query instead of two
+ * per customer (their last confirmed claim's progressCutoffAt, then a count
+ * of stamps after it) — a LATERAL join finds each customer's own cutoff
+ * inline, so this scales as one round trip regardless of customer count.
+ * Used anywhere that needs this for every customer at once (the dashboard's
+ * eligible count, the admin customer list) instead of the N+1 pattern of
+ * calling getCustomerProgressWithThreshold per row. */
+export async function getAllCustomerStampCounts(): Promise<Map<string, number>> {
+  const rows = await prisma.$queryRaw<{ customerId: string; stamps: bigint }[]>`
+    SELECT
+      u.id AS "customerId",
+      COUNT(s.id) FILTER (
+        WHERE s."createdAt" > COALESCE(rc."progressCutoffAt", '-infinity'::timestamp)
+      ) AS stamps
+    FROM "User" u
+    LEFT JOIN LATERAL (
+      SELECT "progressCutoffAt"
+      FROM "RewardClaim"
+      WHERE "customerId" = u.id AND status = 'CONFIRMED'
+      ORDER BY "claimedAt" DESC
+      LIMIT 1
+    ) rc ON true
+    LEFT JOIN "Stamp" s ON s."customerId" = u.id
+    WHERE u.role = 'CUSTOMER'
+    GROUP BY u.id, rc."progressCutoffAt"
+  `;
+  return new Map(rows.map((r) => [r.customerId, Number(r.stamps)]));
+}
+
 export async function countEligibleCustomers() {
-  const [threshold, customers] = await Promise.all([
+  const [threshold, stampCounts] = await Promise.all([
     getStampThreshold(),
-    prisma.user.findMany({ where: { role: "CUSTOMER" }, select: { id: true } }),
+    getAllCustomerStampCounts(),
   ]);
-  const results = await Promise.all(
-    customers.map((c) => getCustomerProgressWithThreshold(c.id, threshold))
-  );
-  return results.filter((r) => r.eligible).length;
+  let count = 0;
+  for (const stamps of stampCounts.values()) {
+    if (stamps >= threshold) count++;
+  }
+  return count;
 }
 
 export type ActivityEntry =
