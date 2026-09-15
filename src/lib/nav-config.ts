@@ -14,6 +14,9 @@ export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Small count pill shown after the label — set per-render (e.g. pending
+   * approvals), not part of the static nav definition below. */
+  badge?: number;
 };
 
 export const customerNav: NavItem[] = [

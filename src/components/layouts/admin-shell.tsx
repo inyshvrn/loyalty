@@ -16,14 +16,14 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { adminNav } from "@/lib/nav-config";
+import { adminNav, type NavItem } from "@/lib/nav-config";
 
-function DrawerNav() {
+function DrawerNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
 
   return (
     <nav className="flex flex-col gap-0.5 px-3">
-      {adminNav.map((item) => {
+      {items.map((item) => {
         const active =
           pathname === item.href || pathname.startsWith(item.href + "/");
         const Icon = item.icon;
@@ -40,6 +40,11 @@ function DrawerNav() {
           >
             <Icon className="size-4" strokeWidth={2} />
             {item.label}
+            {!!item.badge && (
+              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
+                {item.badge}
+              </span>
+            )}
           </SheetClose>
         );
       })}
@@ -49,14 +54,22 @@ function DrawerNav() {
 
 export function AdminShell({
   user,
+  pendingStampRequests,
   children,
 }: {
   user: { name: string; email: string };
+  pendingStampRequests?: number;
   children: React.ReactNode;
 }) {
+  const items: NavItem[] = adminNav.map((item) =>
+    item.href === "/admin/stamp-requests" && pendingStampRequests
+      ? { ...item, badge: pendingStampRequests }
+      : item
+  );
+
   return (
     <div className="flex h-svh overflow-hidden bg-background">
-      <SidebarNav items={adminNav} subtitle="Admin" user={user} />
+      <SidebarNav items={items} subtitle="Admin" user={user} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 md:hidden">
           <BrandMark />
@@ -72,7 +85,7 @@ export function AdminShell({
                   <BrandMark />
                   <SheetTitle className="sr-only">Menu navigasi admin</SheetTitle>
                 </SheetHeader>
-                <DrawerNav />
+                <DrawerNav items={items} />
               </SheetContent>
             </Sheet>
           </div>

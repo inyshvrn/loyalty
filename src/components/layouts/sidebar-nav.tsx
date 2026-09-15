@@ -45,6 +45,11 @@ export function SidebarNav({
             >
               <Icon className="size-4" strokeWidth={2} />
               {item.label}
+              {!!item.badge && (
+                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
+                  {item.badge}
+                </span>
+              )}
             </Link>
           );
         })}
