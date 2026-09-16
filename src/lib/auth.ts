@@ -23,8 +23,16 @@ class AccountDeactivatedError extends CredentialsSignin {
 // (see loginAction) rather than a distinct "locked" message, so a locked-out
 // account can't be told apart from a wrong password by someone probing
 // emails they don't know are registered.
+//
+// Baristas get a looser policy than customers/admins: their email isn't
+// public and the account is created by an admin, not self-registered, so
+// the realistic risk is a staff member fumbling a new password rather than
+// a stranger brute-forcing it — worth a higher threshold and a shorter
+// lockout instead of the stricter default.
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+const BARISTA_MAX_FAILED_ATTEMPTS = 10;
+const BARISTA_LOCKOUT_DURATION_MS = 5 * 60 * 1000;
 
 export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   ...authConfig,
@@ -63,14 +71,18 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
 
         if (!user || !passwordMatches) {
           if (user) {
+            const maxAttempts =
+              user.role === "BARISTA" ? BARISTA_MAX_FAILED_ATTEMPTS : MAX_FAILED_ATTEMPTS;
+            const lockoutDuration =
+              user.role === "BARISTA" ? BARISTA_LOCKOUT_DURATION_MS : LOCKOUT_DURATION_MS;
             const attempts = user.failedLoginAttempts + 1;
             await prisma.user.update({
               where: { id: user.id },
               data:
-                attempts >= MAX_FAILED_ATTEMPTS
+                attempts >= maxAttempts
                   ? {
                       failedLoginAttempts: 0,
-                      lockedUntil: new Date(Date.now() + LOCKOUT_DURATION_MS),
+                      lockedUntil: new Date(Date.now() + lockoutDuration),
                     }
                   : { failedLoginAttempts: attempts },
             });

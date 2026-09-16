@@ -79,6 +79,21 @@ export async function setBaristaActiveAction(userId: string, isActive: boolean) 
   revalidatePath("/admin/baristas");
 }
 
+export async function resetBaristaLockoutAction(userId: string) {
+  await requireAdmin();
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || user.role !== "BARISTA") {
+    throw new Error("Akun barista tidak ditemukan.");
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { failedLoginAttempts: 0, lockedUntil: null },
+  });
+  revalidatePath("/admin/baristas");
+}
+
 const updateBaristaSchema = z.object({
   userId: z.string().min(1),
   name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),

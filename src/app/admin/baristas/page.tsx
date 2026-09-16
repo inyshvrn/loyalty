@@ -13,6 +13,7 @@ import { CreateBaristaDialog } from "@/components/admin/create-barista-dialog";
 import { ToggleBaristaActiveButton } from "@/components/admin/toggle-barista-active-button";
 import { EditBaristaDialog } from "@/components/admin/edit-barista-dialog";
 import { DeleteBaristaButton } from "@/components/admin/delete-barista-button";
+import { ResetLockoutButton } from "@/components/admin/reset-lockout-button";
 
 export default async function AdminBaristasPage() {
   const [baristas, outlets] = await Promise.all([
@@ -61,12 +62,22 @@ export default async function AdminBaristasPage() {
                       {b.outlet?.name ?? "—"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={b.isActive ? "secondary" : "outline"}>
-                        {b.isActive ? "Aktif" : "Nonaktif"}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1.5">
+                        <Badge variant={b.isActive ? "secondary" : "outline"}>
+                          {b.isActive ? "Aktif" : "Nonaktif"}
+                        </Badge>
+                        {b.lockedUntil && b.lockedUntil > new Date() && (
+                          <Badge variant="outline" className="border-destructive/40 text-destructive">
+                            Terkunci
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {b.lockedUntil && b.lockedUntil > new Date() && (
+                          <ResetLockoutButton userId={b.id} />
+                        )}
                         <ToggleBaristaActiveButton
                           userId={b.id}
                           isActive={b.isActive}
@@ -94,19 +105,27 @@ export default async function AdminBaristasPage() {
                 className="flex-row items-center justify-between p-4"
               >
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate text-sm font-semibold text-foreground">
                       {b.name}
                     </p>
                     <Badge variant={b.isActive ? "secondary" : "outline"}>
                       {b.isActive ? "Aktif" : "Nonaktif"}
                     </Badge>
+                    {b.lockedUntil && b.lockedUntil > new Date() && (
+                      <Badge variant="outline" className="border-destructive/40 text-destructive">
+                        Terkunci
+                      </Badge>
+                    )}
                   </div>
                   <p className="truncate text-xs text-muted-foreground">
                     {b.email} · {b.outlet?.name ?? "Tanpa outlet"}
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
+                  {b.lockedUntil && b.lockedUntil > new Date() && (
+                    <ResetLockoutButton userId={b.id} />
+                  )}
                   <ToggleBaristaActiveButton
                     userId={b.id}
                     isActive={b.isActive}
