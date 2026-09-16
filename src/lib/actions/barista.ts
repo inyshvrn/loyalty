@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth, unstable_update } from "@/lib/auth";
@@ -60,6 +61,47 @@ export async function updateOwnNameAction(name: string): Promise<UpdateOwnNameRe
 
   await prisma.user.update({ where: { id: barista.id }, data: { name: parsed.data } });
   await unstable_update({ user: { name: parsed.data } });
+
+  return { ok: true };
+}
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Masukkan kata sandi lama."),
+  newPassword: z.string().min(8, "Kata sandi baru minimal 8 karakter"),
+});
+
+export type UpdateOwnPasswordResult = { ok: true } | { ok: false; error: string };
+
+/** Self-service — a barista setting their own password from the Akun menu,
+ * without needing to ask an admin. Requires the current password first, so
+ * a device left unlocked/logged-in for a moment can't be hijacked by
+ * setting a new password without ever knowing the old one. */
+export async function updateOwnPasswordAction(
+  currentPassword: string,
+  newPassword: string
+): Promise<UpdateOwnPasswordResult> {
+  const barista = await requireBarista();
+
+  const parsed = changePasswordSchema.safeParse({ currentPassword, newPassword });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: barista.id },
+    select: { passwordHash: true },
+  });
+  if (!user) {
+    return { ok: false, error: "Akun tidak ditemukan." };
+  }
+
+  const matches = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
+  if (!matches) {
+    return { ok: false, error: "Kata sandi lama salah." };
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
+  await prisma.user.update({ where: { id: barista.id }, data: { passwordHash } });
 
   return { ok: true };
 }

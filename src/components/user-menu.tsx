@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { LogOut, CircleUserRound, Store, ChevronRight, Pencil } from "lucide-react";
+import { LogOut, CircleUserRound, Store, ChevronRight, Pencil, KeyRound } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -23,11 +23,12 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/auth/form-message";
 import { cn } from "@/lib/utils";
 import { logoutAction } from "@/lib/actions/auth";
-import { updateOwnNameAction } from "@/lib/actions/barista";
+import { updateOwnNameAction, updateOwnPasswordAction } from "@/lib/actions/barista";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -86,6 +87,28 @@ export function UserMenu({
     setSaving(false);
   }
 
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | undefined>();
+
+  async function handleSavePassword(e: FormEvent) {
+    e.preventDefault();
+    setPasswordSaving(true);
+    setPasswordError(undefined);
+    const res = await updateOwnPasswordAction(currentPassword, newPassword);
+    if (!res.ok) {
+      setPasswordError(res.error);
+      setPasswordSaving(false);
+      return;
+    }
+    setPasswordDialogOpen(false);
+    setPasswordSaving(false);
+    setCurrentPassword("");
+    setNewPassword("");
+  }
+
   return (
     <>
       <DropdownMenu>
@@ -135,6 +158,22 @@ export function UserMenu({
             >
               <Pencil className="size-4" />
               Ubah Nama
+            </DropdownMenuItem>
+          )}
+          {isBarista && (
+            <DropdownMenuItem
+              nativeButton
+              className="min-h-11 gap-2.5 py-2.5 text-base"
+              render={<button type="button" className="w-full" />}
+              onClick={() => {
+                setCurrentPassword("");
+                setNewPassword("");
+                setPasswordError(undefined);
+                setPasswordDialogOpen(true);
+              }}
+            >
+              <KeyRound className="size-4" />
+              Ubah Kata Sandi
             </DropdownMenuItem>
           )}
           {stats && (
@@ -220,6 +259,47 @@ export function UserMenu({
               <DialogFooter>
                 <Button type="submit" disabled={saving}>
                   {saving ? "Menyimpan..." : "Simpan"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {isBarista && (
+        <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Ubah Kata Sandi</DialogTitle>
+              <DialogDescription>
+                Masukkan kata sandi lama dulu buat konfirmasi sebelum diganti.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSavePassword} className="flex flex-col gap-4">
+              <FormMessage error={passwordError} />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="current-password">Kata sandi lama</Label>
+                <PasswordInput
+                  id="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="new-password">Kata sandi baru</Label>
+                <PasswordInput
+                  id="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Minimal 8 karakter"
+                  minLength={8}
+                  required
+                />
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={passwordSaving}>
+                  {passwordSaving ? "Menyimpan..." : "Simpan"}
                 </Button>
               </DialogFooter>
             </form>
