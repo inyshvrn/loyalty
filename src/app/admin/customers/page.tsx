@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { prisma } from "@/lib/prisma";
 import { getStampThreshold, getAllCustomerStampCounts } from "@/lib/loyalty";
+import { sortByNameInsensitive } from "@/lib/utils";
 import { MigrateCustomerDialog } from "@/components/admin/migrate-customer-dialog";
 import { ExportCustomersMenu } from "@/components/admin/export-customers-menu";
 
@@ -43,7 +44,7 @@ export default async function AdminCustomersPage(
     getAllCustomerStampCounts(),
   ]);
 
-  const rows = customers.map((c) => {
+  const rows = sortByNameInsensitive(customers).map((c) => {
     const stamps = stampCounts.get(c.id) ?? 0;
     return { ...c, progress: { stamps, threshold, eligible: stamps >= threshold } };
   });

@@ -10,6 +10,7 @@ import {
   getStampCountSince,
 } from "@/lib/loyalty";
 import { getStoreDayBounds, formatStoreTime } from "@/lib/store-time";
+import { sortByNameInsensitive } from "@/lib/utils";
 import type { User } from "@/generated/prisma/client";
 
 async function requireBarista() {
@@ -112,7 +113,7 @@ export async function searchCustomersAction(
     orderBy: { name: "asc" },
   });
 
-  return Promise.all(customers.map(buildCustomerStatus));
+  return Promise.all(sortByNameInsensitive(customers).map(buildCustomerStatus));
 }
 
 export type AddStampResult =
