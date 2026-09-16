@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import QRCode from "qrcode";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { prisma } from "@/lib/prisma";
 import {
   getStampThreshold,
@@ -96,76 +97,77 @@ export default async function AdminCustomerDetailPage(
         {everStampCount === 0 && <GrantInitialStampsDialog customerId={id} />}
       </div>
 
-      <div className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">
-          Riwayat Kunjungan
-        </h2>
-        {stamps.length === 0 ? (
-          <Card className="px-4 py-6 text-center text-sm text-muted-foreground">
-            Belum ada kunjungan.
-          </Card>
-        ) : (
-          <Card className="divide-y divide-border p-0">
-            {stamps.map((s) => (
-              <div
-                key={s.id}
-                className="flex items-center justify-between px-4 py-3 text-sm"
-              >
-                <span className="text-muted-foreground">
-                  {formatRelativeIndonesian(s.createdAt)}
-                  {" · oleh "}
-                  {s.scannedByBarista.name}
-                  {s.outlet && ` · ${s.outlet.name}`}
-                </span>
-                <div className="flex items-center gap-1">
-                  <span className="font-medium text-foreground">
-                    +1 stempel
-                  </span>
-                  <RemoveStampButton stampId={s.id} />
-                </div>
-              </div>
-            ))}
-          </Card>
-        )}
-      </div>
+      <Tabs defaultValue="visits">
+        <TabsList className="w-full max-w-xs">
+          <TabsTrigger value="visits">Kunjungan</TabsTrigger>
+          <TabsTrigger value="claims">Reward</TabsTrigger>
+        </TabsList>
 
-      <div>
-        <h2 className="mb-3 text-sm font-semibold text-foreground">
-          Riwayat Reward
-        </h2>
-        {claims.length === 0 ? (
-          <Card className="px-4 py-6 text-center text-sm text-muted-foreground">
-            Belum ada reward yang diklaim.
-          </Card>
-        ) : (
-          <Card className="divide-y divide-border p-0">
-            {claims.map((c) => (
-              <div
-                key={c.id}
-                className="flex items-center justify-between px-4 py-3 text-sm"
-              >
-                <div>
-                  <p className="font-medium text-foreground">
-                    {c.status === "CANCELLED"
-                      ? "Klaim dibatalkan"
-                      : "Reward diklaim"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatRelativeIndonesian(c.claimedAt)}
+        <TabsContent value="visits" className="mt-4">
+          {stamps.length === 0 ? (
+            <Card className="px-4 py-6 text-center text-sm text-muted-foreground">
+              Belum ada kunjungan.
+            </Card>
+          ) : (
+            <Card className="divide-y divide-border p-0">
+              {stamps.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between px-4 py-3 text-sm"
+                >
+                  <span className="text-muted-foreground">
+                    {formatRelativeIndonesian(s.createdAt)}
                     {" · oleh "}
-                    {c.status === "CANCELLED" && c.cancelledByAdmin
-                      ? c.cancelledByAdmin.name
-                      : c.confirmedByBarista.name}
-                  </p>
+                    {s.scannedByBarista.name}
+                    {s.outlet && ` · ${s.outlet.name}`}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium text-foreground">
+                      +1 stempel
+                    </span>
+                    <RemoveStampButton stampId={s.id} />
+                  </div>
                 </div>
-                {c.status === "CONFIRMED" && (
-                  <CancelClaimButton claimId={c.id} />
-                )}
-              </div>
-            ))}
-          </Card>
-        )}
-      </div>
+              ))}
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="claims" className="mt-4">
+          {claims.length === 0 ? (
+            <Card className="px-4 py-6 text-center text-sm text-muted-foreground">
+              Belum ada reward yang diklaim.
+            </Card>
+          ) : (
+            <Card className="divide-y divide-border p-0">
+              {claims.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between px-4 py-3 text-sm"
+                >
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {c.status === "CANCELLED"
+                        ? "Klaim dibatalkan"
+                        : "Reward diklaim"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatRelativeIndonesian(c.claimedAt)}
+                      {" · oleh "}
+                      {c.status === "CANCELLED" && c.cancelledByAdmin
+                        ? c.cancelledByAdmin.name
+                        : c.confirmedByBarista.name}
+                    </p>
+                  </div>
+                  {c.status === "CONFIRMED" && (
+                    <CancelClaimButton claimId={c.id} />
+                  )}
+                </div>
+              ))}
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
