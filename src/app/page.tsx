@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LoyaltyCard } from "@/components/loyalty-card";
 import { BrandWatermark } from "@/components/brand-watermark";
+import { auth } from "@/lib/auth";
+import { roleHome } from "@/lib/role-home";
 
 const steps = [
   {
@@ -30,19 +32,34 @@ const trust = [
   "QR tetap ada walau ganti HP",
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const session = await auth();
+  // Already-authenticated visitors get redirected away from /login and
+  // /register the moment they click through (see proxy.ts) — showing them
+  // as guest CTAs here anyway just means a confusing silent redirect. Point
+  // straight at their own home instead.
+  const home = session?.user ? roleHome[session.user.role] : null;
+
   return (
     <div className="flex min-h-svh flex-col bg-background">
       <header className="sticky top-0 z-10 border-b border-border/70 bg-background/90 backdrop-blur-sm">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3.5">
           <BrandMark />
           <div className="flex items-center gap-2">
-            <Button variant="ghost" nativeButton={false} render={<Link href="/login" />}>
-              Masuk
-            </Button>
-            <Button nativeButton={false} render={<Link href="/register" />}>
-              Daftar
-            </Button>
+            {home ? (
+              <Button nativeButton={false} render={<Link href={home} />}>
+                Lanjut ke Akun
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" nativeButton={false} render={<Link href="/login" />}>
+                  Masuk
+                </Button>
+                <Button nativeButton={false} render={<Link href="/register" />}>
+                  Daftar
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -63,15 +80,23 @@ export default function LandingPage() {
                 kertas yang bisa hilang atau tertinggal.
               </p>
               <div className="mt-7 flex flex-wrap items-center gap-3">
-                <Button size="lg" nativeButton={false} render={<Link href="/register" />}>
-                  Daftar Sekarang
-                </Button>
-                <Link
-                  href="/login"
-                  className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
-                >
-                  Sudah punya akun? Masuk
-                </Link>
+                {home ? (
+                  <Button size="lg" nativeButton={false} render={<Link href={home} />}>
+                    Lanjut ke Akun
+                  </Button>
+                ) : (
+                  <>
+                    <Button size="lg" nativeButton={false} render={<Link href="/register" />}>
+                      Daftar Sekarang
+                    </Button>
+                    <Link
+                      href="/login"
+                      className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+                    >
+                      Sudah punya akun? Masuk
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
 
