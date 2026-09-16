@@ -75,9 +75,12 @@ export function AkunView({
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 py-6 md:py-10">
+      {/* Mobile already has an "Akun" tab in the persistent bottom nav to
+       * get here and back — this back link is a desktop-only affordance,
+       * since desktop has no such tab bar. */}
       <Link
         href="/scan"
-        className="mb-4 inline-flex items-center gap-1 self-start text-xs font-semibold text-muted-foreground hover:text-foreground"
+        className="mb-4 hidden items-center gap-1 self-start text-xs font-semibold text-muted-foreground hover:text-foreground md:inline-flex"
       >
         <ArrowLeft className="size-3.5" />
         Kembali ke Scan

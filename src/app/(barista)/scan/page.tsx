@@ -1,12 +1,12 @@
-import { auth } from "@/lib/auth";
-import { ScanView } from "@/components/barista/scan-view";
+import { ScanQrView } from "@/components/barista/scan-qr-view";
+import { ScanSubNav } from "@/components/barista/scan-subnav";
 
-export default async function ScanPage() {
-  const session = await auth();
-
+export default function ScanPage() {
   return (
-    <ScanView
-      user={{ name: session?.user?.name ?? "", email: session?.user?.email ?? "" }}
-    />
+    <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 py-6 md:py-10">
+      <h1 className="mb-4 text-xl font-bold text-foreground">Scan Pelanggan</h1>
+      <ScanSubNav active="scan" />
+      <ScanQrView />
+    </div>
   );
 }

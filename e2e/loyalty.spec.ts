@@ -36,7 +36,8 @@ test.describe("core loyalty flow", () => {
     await seedBackdatedStamps(customer.id, barista.id, threshold - 1);
 
     await loginBarista(page, barista.email, "BaristaPass123!");
-    await page.click('button:has-text("Cari Manual")');
+    await page.click('a:has-text("Cari Manual")');
+    await page.waitForURL((url) => url.pathname === "/scan/cari");
     await page.fill('input[placeholder*="Cari nama"]', customer.email);
     await page.keyboard.press("Enter");
 
@@ -74,7 +75,8 @@ test.describe("core loyalty flow", () => {
     });
 
     await loginBarista(page, barista.email, "BaristaPass123!");
-    await page.click('button:has-text("Cari Manual")');
+    await page.click('a:has-text("Cari Manual")');
+    await page.waitForURL((url) => url.pathname === "/scan/cari");
     await page.fill('input[placeholder*="Cari nama"]', customer.email);
     await page.keyboard.press("Enter");
 

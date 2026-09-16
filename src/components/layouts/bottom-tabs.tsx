@@ -9,11 +9,17 @@ import type { NavItem } from "@/lib/nav-config";
 export function BottomTabs({
   items,
   user,
+  exact = false,
 }: {
   items: NavItem[];
   /** Adds an "Akun" slot (name/email + logout) alongside the nav links, so
    * logging out doesn't need a separate trip to a small header menu. */
   user?: { name: string; email: string };
+  /** Match only the exact pathname instead of also matching sub-routes —
+   * needed when one item's href (e.g. "/scan") is itself a path prefix of
+   * a sibling item's href (e.g. "/scan/cari"), which would otherwise keep
+   * both lit up at once. */
+  exact?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -23,8 +29,9 @@ export function BottomTabs({
       aria-label="Navigasi utama"
     >
       {items.map((item) => {
-        const active =
-          pathname === item.href || pathname.startsWith(item.href + "/");
+        const active = exact
+          ? pathname === item.href
+          : pathname === item.href || pathname.startsWith(item.href + "/");
         const Icon = item.icon;
         return (
           <Link

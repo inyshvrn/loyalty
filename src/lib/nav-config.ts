@@ -8,6 +8,9 @@ import {
   Settings,
   Store,
   ClipboardCheck,
+  Camera,
+  Search,
+  CircleUserRound,
 } from "lucide-react";
 
 export type NavItem = {
@@ -22,6 +25,12 @@ export type NavItem = {
 export const customerNav: NavItem[] = [
   { href: "/dashboard", label: "Kartu", icon: QrCode },
   { href: "/history", label: "Riwayat", icon: History },
+];
+
+export const baristaNav: NavItem[] = [
+  { href: "/scan", label: "Scan QR", icon: Camera },
+  { href: "/scan/cari", label: "Cari Manual", icon: Search },
+  { href: "/scan/akun", label: "Akun", icon: CircleUserRound },
 ];
 
 export const adminNav: NavItem[] = [
