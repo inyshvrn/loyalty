@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -13,13 +13,27 @@ export function RegisterForm() {
     registerAction,
     null
   );
+  // Controlled so a failed submit (duplicate email, weak password, etc.)
+  // never clears what was typed — no reason to retype every field over a
+  // mistake in just one of them.
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <FormMessage error={state?.error} />
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="name">Nama lengkap</Label>
-        <Input id="name" name="name" placeholder="Sarah Wijaya" required />
+        <Input
+          id="name"
+          name="name"
+          placeholder="Sarah Wijaya"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="email">Email</Label>
@@ -28,6 +42,8 @@ export function RegisterForm() {
           name="email"
           type="email"
           placeholder="nama@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
         />
       </div>
@@ -38,6 +54,8 @@ export function RegisterForm() {
           name="phone"
           type="tel"
           placeholder="08xx xxxx xxxx"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
           required
         />
       </div>
@@ -48,6 +66,8 @@ export function RegisterForm() {
           name="password"
           placeholder="Minimal 8 karakter"
           minLength={8}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           required
         />
       </div>

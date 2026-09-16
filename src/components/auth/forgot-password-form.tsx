@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ export function ForgotPasswordForm() {
     forgotPasswordAction,
     null
   );
+  const [email, setEmail] = useState("");
 
   if (state?.success) {
     return <FormMessage success={state.success} />;
@@ -30,6 +31,8 @@ export function ForgotPasswordForm() {
           name="email"
           type="email"
           placeholder="nama@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
         />
       </div>

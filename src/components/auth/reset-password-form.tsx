@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,10 @@ export function ResetPasswordForm({ token }: { token: string }) {
     resetPasswordAction,
     null
   );
+  // Controlled so a failed submit (mismatched confirmation, too short)
+  // doesn't clear both fields — no reason to retype the one that was fine.
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -27,6 +31,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
           name="password"
           placeholder="Minimal 8 karakter"
           minLength={8}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           required
         />
       </div>
@@ -37,6 +43,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
           name="confirmPassword"
           placeholder="Ulangi kata sandi baru"
           minLength={8}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
           required
         />
       </div>
