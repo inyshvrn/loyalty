@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { roleHome } from "@/lib/role-home";
-import { getBaristaActivityStats } from "@/lib/loyalty";
+import { getBaristaActivityStats, getBaristaOutletName } from "@/lib/loyalty";
 import { BaristaShell } from "@/components/layouts/barista-shell";
 
 export default async function BaristaLayout({
@@ -13,12 +13,16 @@ export default async function BaristaLayout({
   if (!session?.user) redirect("/login");
   if (session.user.role !== "BARISTA") redirect(roleHome[session.user.role]);
 
-  const stats = await getBaristaActivityStats(session.user.id);
+  const [stats, outletName] = await Promise.all([
+    getBaristaActivityStats(session.user.id),
+    getBaristaOutletName(session.user.id),
+  ]);
 
   return (
     <BaristaShell
       user={{ name: session.user.name ?? "", email: session.user.email ?? "" }}
       stats={stats}
+      outletName={outletName}
     >
       {children}
     </BaristaShell>

@@ -6,10 +6,12 @@ import type { BaristaActivityStats } from "@/lib/loyalty";
 export function BaristaShell({
   user,
   stats,
+  outletName,
   children,
 }: {
   user: { name: string; email: string };
   stats?: BaristaActivityStats;
+  outletName?: string | null;
   children: React.ReactNode;
 }) {
   return (
@@ -20,7 +22,12 @@ export function BaristaShell({
           <Badge variant="secondary" className="font-semibold">
             Barista
           </Badge>
-          <UserMenu name={user.name} email={user.email} stats={stats} />
+          <UserMenu
+            name={user.name}
+            email={user.email}
+            stats={stats}
+            outletName={outletName}
+          />
         </div>
       </header>
       <main className="flex flex-1 flex-col">{children}</main>

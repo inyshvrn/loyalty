@@ -1,6 +1,7 @@
 "use client";
 
-import { LogOut, CircleUserRound } from "lucide-react";
+import Link from "next/link";
+import { LogOut, CircleUserRound, Store, ChevronRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -28,6 +29,7 @@ export function UserMenu({
   email,
   variant = "avatar",
   stats,
+  outletName,
 }: {
   name: string;
   email: string;
@@ -42,6 +44,12 @@ export function UserMenu({
     stampsThisMonth: number;
     claimsThisMonth: number;
   };
+  /** Barista-only — their currently assigned outlet (null if none set yet).
+   * Passing this at all (even null) shows a "ganti outlet" row that jumps
+   * to /scan/pilih-outlet — reachable anytime, not just once per login, so
+   * a barista covering a second outlet mid-shift doesn't need to log out
+   * and back in just to switch. */
+  outletName?: string | null;
 }) {
   return (
     <DropdownMenu>
@@ -103,6 +111,23 @@ export function UserMenu({
               Bulan ini: {stats.stampsThisMonth} stempel &middot;{" "}
               {stats.claimsThisMonth} reward
             </p>
+          </>
+        )}
+        {outletName !== undefined && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              nativeButton
+              className="min-h-11 gap-2.5 py-2.5 text-base"
+              render={<Link href="/scan/pilih-outlet" />}
+            >
+              <Store className="size-4" />
+              <span className="flex-1 truncate">
+                {outletName ?? "Pilih outlet"}
+              </span>
+              <span className="text-xs text-muted-foreground">Ganti</span>
+              <ChevronRight className="size-3.5 text-muted-foreground" />
+            </DropdownMenuItem>
           </>
         )}
         <DropdownMenuSeparator />

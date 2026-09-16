@@ -141,6 +141,19 @@ export async function getBaristaActivityStats(
   return { totalStamps, totalClaims, stampsThisMonth, claimsThisMonth };
 }
 
+/** A barista's currently assigned outlet name (not their confirmed-this-
+ * session status — see proxy.ts / auth.config.ts for that), shown in the
+ * Akun menu so they know what's set before deciding whether to switch. */
+export async function getBaristaOutletName(
+  baristaId: string
+): Promise<string | null> {
+  const barista = await prisma.user.findUnique({
+    where: { id: baristaId },
+    select: { outlet: { select: { name: true } } },
+  });
+  return barista?.outlet?.name ?? null;
+}
+
 /** Admin-only variants of the customer history — include who performed the
  * action. Kept separate from getRecentStamps/getRecentClaims (used on the
  * customer-facing dashboard/history pages) so staff names are never fetched

@@ -26,9 +26,11 @@ const navIconWrapClass =
 export function ScanView({
   user,
   stats,
+  outletName,
 }: {
   user: { name: string; email: string };
   stats?: BaristaActivityStats;
+  outletName?: string | null;
 }) {
   const [tab, setTab] = useState<"scan" | "manual">("scan");
   const [query, setQuery] = useState("");
@@ -257,7 +259,13 @@ export function ScanView({
             </TabsTrigger>
           </TabsList>
           <div className="flex flex-1 md:hidden">
-            <UserMenu name={user.name} email={user.email} variant="nav" stats={stats} />
+            <UserMenu
+              name={user.name}
+              email={user.email}
+              variant="nav"
+              stats={stats}
+              outletName={outletName}
+            />
           </div>
         </div>
       </Tabs>
