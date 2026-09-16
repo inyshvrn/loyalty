@@ -101,6 +101,46 @@ export async function countConfirmedClaimsThisMonth() {
   });
 }
 
+export type BaristaActivityStats = {
+  totalStamps: number;
+  totalClaims: number;
+  stampsThisMonth: number;
+  claimsThisMonth: number;
+};
+
+/** Shown in a barista's account menu — how much they've personally done,
+ * both all-time and this month. */
+export async function getBaristaActivityStats(
+  baristaId: string
+): Promise<BaristaActivityStats> {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+  const [totalStamps, totalClaims, stampsThisMonth, claimsThisMonth] =
+    await Promise.all([
+      prisma.stamp.count({ where: { scannedByBaristaId: baristaId } }),
+      prisma.rewardClaim.count({
+        where: { confirmedByBaristaId: baristaId, status: "CONFIRMED" },
+      }),
+      prisma.stamp.count({
+        where: {
+          scannedByBaristaId: baristaId,
+          createdAt: { gte: monthStart, lt: monthEnd },
+        },
+      }),
+      prisma.rewardClaim.count({
+        where: {
+          confirmedByBaristaId: baristaId,
+          status: "CONFIRMED",
+          claimedAt: { gte: monthStart, lt: monthEnd },
+        },
+      }),
+    ]);
+
+  return { totalStamps, totalClaims, stampsThisMonth, claimsThisMonth };
+}
+
 /** Admin-only variants of the customer history — include who performed the
  * action. Kept separate from getRecentStamps/getRecentClaims (used on the
  * customer-facing dashboard/history pages) so staff names are never fetched

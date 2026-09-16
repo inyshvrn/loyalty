@@ -1,12 +1,15 @@
 import { BrandMark } from "@/components/brand-mark";
 import { UserMenu } from "@/components/user-menu";
 import { Badge } from "@/components/ui/badge";
+import type { BaristaActivityStats } from "@/lib/loyalty";
 
 export function BaristaShell({
   user,
+  stats,
   children,
 }: {
   user: { name: string; email: string };
+  stats?: BaristaActivityStats;
   children: React.ReactNode;
 }) {
   return (
@@ -17,7 +20,7 @@ export function BaristaShell({
           <Badge variant="secondary" className="font-semibold">
             Barista
           </Badge>
-          <UserMenu name={user.name} email={user.email} />
+          <UserMenu name={user.name} email={user.email} stats={stats} />
         </div>
       </header>
       <main className="flex flex-1 flex-col">{children}</main>

@@ -27,12 +27,21 @@ export function UserMenu({
   name,
   email,
   variant = "avatar",
+  stats,
 }: {
   name: string;
   email: string;
   /** "nav" matches the icon-over-label look of BottomTabs, for use as a
    * bottom-nav "Akun" slot instead of the small avatar icon. */
   variant?: "avatar" | "nav";
+  /** Barista-only — shown as a couple of stat tiles above "Keluar" when
+   * present. Omitted entirely for customer/admin menus. */
+  stats?: {
+    totalStamps: number;
+    totalClaims: number;
+    stampsThisMonth: number;
+    claimsThisMonth: number;
+  };
 }) {
   return (
     <DropdownMenu>
@@ -60,7 +69,7 @@ export function UserMenu({
           </>
         )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="flex flex-col gap-0.5 py-1.5">
             <span className="text-sm font-semibold text-foreground">{name}</span>
@@ -69,6 +78,33 @@ export function UserMenu({
             </span>
           </DropdownMenuLabel>
         </DropdownMenuGroup>
+        {stats && (
+          <>
+            <DropdownMenuSeparator />
+            <div className="grid grid-cols-2 gap-2 px-1.5 py-2">
+              <div className="rounded-lg bg-secondary px-2.5 py-2">
+                <p className="font-mono text-lg font-bold tabular-nums text-foreground">
+                  {stats.totalStamps}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Stempel diberikan
+                </p>
+              </div>
+              <div className="rounded-lg bg-secondary px-2.5 py-2">
+                <p className="font-mono text-lg font-bold tabular-nums text-foreground">
+                  {stats.totalClaims}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Reward dikonfirmasi
+                </p>
+              </div>
+            </div>
+            <p className="px-2.5 pb-1.5 text-[11px] text-muted-foreground">
+              Bulan ini: {stats.stampsThisMonth} stempel &middot;{" "}
+              {stats.claimsThisMonth} reward
+            </p>
+          </>
+        )}
         <DropdownMenuSeparator />
         <form action={logoutAction}>
           <DropdownMenuItem
