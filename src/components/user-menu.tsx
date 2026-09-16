@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import { LogOut, CircleUserRound } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import { logoutAction } from "@/lib/actions/auth";
 
 function initials(name: string) {
@@ -22,14 +23,42 @@ function initials(name: string) {
     .join("");
 }
 
-export function UserMenu({ name, email }: { name: string; email: string }) {
+export function UserMenu({
+  name,
+  email,
+  variant = "avatar",
+}: {
+  name: string;
+  email: string;
+  /** "nav" matches the icon-over-label look of BottomTabs, for use as a
+   * bottom-nav "Akun" slot instead of the small avatar icon. */
+  variant?: "avatar" | "nav";
+}) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex size-11 items-center justify-center gap-2 rounded-lg outline-none hover:bg-secondary focus-visible:bg-secondary">
-        <Avatar>
-          <AvatarFallback>{initials(name)}</AvatarFallback>
-        </Avatar>
-        <span className="sr-only">Menu akun</span>
+      <DropdownMenuTrigger
+        className={cn(
+          "outline-none",
+          variant === "nav"
+            ? "flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground"
+            : "flex size-11 items-center justify-center gap-2 rounded-lg hover:bg-secondary focus-visible:bg-secondary"
+        )}
+      >
+        {variant === "nav" ? (
+          <>
+            <span className="flex size-8 items-center justify-center rounded-full transition-colors">
+              <CircleUserRound className="size-5" strokeWidth={2} />
+            </span>
+            Akun
+          </>
+        ) : (
+          <>
+            <Avatar>
+              <AvatarFallback>{initials(name)}</AvatarFallback>
+            </Avatar>
+            <span className="sr-only">Menu akun</span>
+          </>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuGroup>

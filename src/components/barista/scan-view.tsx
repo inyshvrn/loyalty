@@ -6,6 +6,7 @@ import { Camera, Search } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/user-menu";
 import { QrScanner } from "@/components/barista/qr-scanner";
 import { CustomerStatusCard } from "@/components/barista/customer-status-card";
 import {
@@ -15,7 +16,13 @@ import {
   type CustomerStatus,
 } from "@/lib/actions/barista";
 
-export function ScanView() {
+const navTabClass =
+  "group flex h-auto flex-1 flex-col items-center gap-1 rounded-none border-none bg-transparent px-1 py-2.5 text-[11px] font-semibold text-muted-foreground shadow-none transition-colors data-active:bg-transparent data-active:text-primary data-active:shadow-none md:h-7 md:flex-initial md:flex-row md:gap-1.5 md:rounded-md md:bg-transparent md:px-3 md:py-0.5 md:text-sm md:text-foreground/60 md:data-active:bg-background md:data-active:text-foreground";
+
+const navIconWrapClass =
+  "flex size-8 items-center justify-center rounded-full transition-colors group-data-active:bg-primary/15 md:hidden";
+
+export function ScanView({ user }: { user: { name: string; email: string } }) {
   const [tab, setTab] = useState<"scan" | "manual">("scan");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CustomerStatus[]>([]);
@@ -218,19 +225,34 @@ export function ScanView() {
           </div>
         </TabsContent>
 
-        {/* Fixed to the bottom on mobile — within thumb reach — instead of
-         * sitting at the top of a tall screen; a normal in-flow tab strip
-         * above the content on desktop, where reach isn't a concern. */}
-        <TabsList className="fixed inset-x-0 bottom-0 z-20 h-auto w-full max-w-none justify-stretch gap-2 rounded-none border-t border-border bg-card/95 p-2 pb-[max(env(safe-area-inset-bottom),8px)] backdrop-blur-sm md:static md:order-first md:mb-4 md:w-fit md:max-w-full md:justify-center md:gap-0 md:rounded-lg md:border-none md:bg-muted md:p-[3px] md:pb-[3px] md:backdrop-blur-none">
-          <TabsTrigger value="scan" className="h-11 flex-1 text-base md:h-7 md:flex-initial md:text-sm">
-            <Camera className="size-4" />
-            Scan QR
-          </TabsTrigger>
-          <TabsTrigger value="manual" className="h-11 flex-1 text-base md:h-7 md:flex-initial md:text-sm">
-            <Search className="size-4" />
-            Cari Manual
-          </TabsTrigger>
-        </TabsList>
+        {/* Fixed to the bottom on mobile, styled to match BottomTabs (icon
+         * over label, same active-state pill) so it reads as the app's nav
+         * rather than a tab strip that got shoved to the edge of the
+         * screen — with an "Akun" slot alongside so logging out doesn't
+         * need a trip to the header menu. A normal in-flow tab strip above
+         * the content on desktop, where thumb reach isn't a concern and the
+         * header's account menu is already easy to reach. */}
+        <div className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-card/95 pb-[max(env(safe-area-inset-bottom),10px)] backdrop-blur-sm md:static md:order-first md:mb-4 md:w-fit md:justify-center md:border-none md:bg-muted md:p-[3px] md:pb-[3px] md:backdrop-blur-none">
+          <TabsList className="contents">
+            <TabsTrigger value="scan" className={navTabClass}>
+              <span className={navIconWrapClass}>
+                <Camera className="size-5" strokeWidth={2} />
+              </span>
+              <Camera className="hidden size-4 md:block" />
+              Scan QR
+            </TabsTrigger>
+            <TabsTrigger value="manual" className={navTabClass}>
+              <span className={navIconWrapClass}>
+                <Search className="size-5" strokeWidth={2} />
+              </span>
+              <Search className="hidden size-4 md:block" />
+              Cari Manual
+            </TabsTrigger>
+          </TabsList>
+          <div className="flex flex-1 md:hidden">
+            <UserMenu name={user.name} email={user.email} variant="nav" />
+          </div>
+        </div>
       </Tabs>
     </div>
   );

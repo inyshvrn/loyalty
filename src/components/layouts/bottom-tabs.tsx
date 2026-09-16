@@ -3,9 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { UserMenu } from "@/components/user-menu";
 import type { NavItem } from "@/lib/nav-config";
 
-export function BottomTabs({ items }: { items: NavItem[] }) {
+export function BottomTabs({
+  items,
+  user,
+}: {
+  items: NavItem[];
+  /** Adds an "Akun" slot (name/email + logout) alongside the nav links, so
+   * logging out doesn't need a separate trip to a small header menu. */
+  user?: { name: string; email: string };
+}) {
   const pathname = usePathname();
 
   return (
@@ -38,6 +47,7 @@ export function BottomTabs({ items }: { items: NavItem[] }) {
           </Link>
         );
       })}
+      {user && <UserMenu name={user.name} email={user.email} variant="nav" />}
     </nav>
   );
 }
