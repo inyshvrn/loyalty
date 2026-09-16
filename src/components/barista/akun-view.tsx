@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, LogOut, Pencil, KeyRound, Store, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -32,6 +33,7 @@ export function AkunView({
   stats: BaristaActivityStats;
   outletName: string | null;
 }) {
+  const router = useRouter();
   const [nameDialogOpen, setNameDialogOpen] = useState(false);
   const [newName, setNewName] = useState(name);
   const [savingName, setSavingName] = useState(false);
@@ -49,6 +51,11 @@ export function AkunView({
     }
     setNameDialogOpen(false);
     setSavingName(false);
+    // The heading/header above still hold the name from when this page was
+    // first server-rendered — unstable_update() alone updates the session
+    // but doesn't re-fetch that, so without this the new name only shows up
+    // after some unrelated navigation happens to force a refresh.
+    router.refresh();
   }
 
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
