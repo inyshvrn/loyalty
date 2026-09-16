@@ -15,7 +15,6 @@ import {
   confirmRewardAction,
   type CustomerStatus,
 } from "@/lib/actions/barista";
-import type { BaristaActivityStats } from "@/lib/loyalty";
 
 const navTabClass =
   "group flex h-auto flex-1 flex-col items-center gap-1 rounded-none border-none bg-transparent px-1 py-2.5 text-[11px] font-semibold text-muted-foreground shadow-none transition-colors data-active:bg-transparent data-active:text-primary data-active:shadow-none md:h-7 md:flex-initial md:flex-row md:gap-1.5 md:rounded-md md:bg-transparent md:px-3 md:py-0.5 md:text-sm md:text-foreground/60 md:data-active:bg-background md:data-active:text-foreground";
@@ -23,15 +22,7 @@ const navTabClass =
 const navIconWrapClass =
   "flex size-8 items-center justify-center rounded-full transition-colors group-data-active:bg-primary/15 md:hidden";
 
-export function ScanView({
-  user,
-  stats,
-  outletName,
-}: {
-  user: { name: string; email: string };
-  stats?: BaristaActivityStats;
-  outletName?: string | null;
-}) {
+export function ScanView({ user }: { user: { name: string; email: string } }) {
   const [tab, setTab] = useState<"scan" | "manual">("scan");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CustomerStatus[]>([]);
@@ -263,8 +254,7 @@ export function ScanView({
               name={user.name}
               email={user.email}
               variant="nav"
-              stats={stats}
-              outletName={outletName}
+              isBarista
             />
           </div>
         </div>

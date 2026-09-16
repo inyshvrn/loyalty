@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { LogOut, CircleUserRound, Store, ChevronRight, Pencil, KeyRound } from "lucide-react";
+import { LogOut, CircleUserRound } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -12,23 +11,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
-import { Button } from "@/components/ui/button";
-import { FormMessage } from "@/components/auth/form-message";
 import { cn } from "@/lib/utils";
 import { logoutAction } from "@/lib/actions/auth";
-import { updateOwnNameAction, updateOwnPasswordAction } from "@/lib/actions/barista";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -39,273 +24,85 @@ function initials(name: string) {
     .join("");
 }
 
+const triggerClass = {
+  nav: "flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground",
+  avatar:
+    "flex size-11 items-center justify-center gap-2 rounded-lg hover:bg-secondary focus-visible:bg-secondary",
+};
+
+function TriggerContent({ variant, name }: { variant: "avatar" | "nav"; name: string }) {
+  if (variant === "nav") {
+    return (
+      <>
+        <span className="flex size-8 items-center justify-center rounded-full transition-colors">
+          <CircleUserRound className="size-5" strokeWidth={2} />
+        </span>
+        Akun
+      </>
+    );
+  }
+  return (
+    <>
+      <Avatar>
+        <AvatarFallback>{initials(name)}</AvatarFallback>
+      </Avatar>
+      <span className="sr-only">Menu akun</span>
+    </>
+  );
+}
+
 export function UserMenu({
   name,
   email,
   variant = "avatar",
-  stats,
-  outletName,
+  /** Barista-only — passing this at all (even undefined-ish falsy states
+   * are still "passed") points the whole trigger straight at /scan/akun
+   * instead of opening a dropdown. That page holds everything that used to
+   * live in this menu for baristas (stats, outlet switch, name/password
+   * edit, logout) — cramming all of that into a small menu got tight, and
+   * a barista's account is worth more room than a customer's/admin's. */
+  isBarista = false,
 }: {
   name: string;
   email: string;
-  /** "nav" matches the icon-over-label look of BottomTabs, for use as a
-   * bottom-nav "Akun" slot instead of the small avatar icon. */
   variant?: "avatar" | "nav";
-  /** Barista-only — shown as a couple of stat tiles above "Keluar" when
-   * present. Omitted entirely for customer/admin menus. Its presence also
-   * gates the self-service "Ubah Nama" row, since that's barista-only too. */
-  stats?: {
-    totalStamps: number;
-    totalClaims: number;
-    stampsThisMonth: number;
-    claimsThisMonth: number;
-  };
-  /** Barista-only — their currently assigned outlet (null if none set yet).
-   * Passing this at all (even null) shows a "ganti outlet" row that jumps
-   * to /scan/pilih-outlet — reachable anytime, not just once per login, so
-   * a barista covering a second outlet mid-shift doesn't need to log out
-   * and back in just to switch. */
-  outletName?: string | null;
+  isBarista?: boolean;
 }) {
-  const isBarista = stats !== undefined;
-  const [nameDialogOpen, setNameDialogOpen] = useState(false);
-  const [newName, setNewName] = useState(name);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | undefined>();
-
-  async function handleSaveName(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError(undefined);
-    const res = await updateOwnNameAction(newName);
-    if (!res.ok) {
-      setError(res.error);
-      setSaving(false);
-      return;
-    }
-    setNameDialogOpen(false);
-    setSaving(false);
-  }
-
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [passwordSaving, setPasswordSaving] = useState(false);
-  const [passwordError, setPasswordError] = useState<string | undefined>();
-
-  async function handleSavePassword(e: FormEvent) {
-    e.preventDefault();
-    setPasswordSaving(true);
-    setPasswordError(undefined);
-    const res = await updateOwnPasswordAction(currentPassword, newPassword);
-    if (!res.ok) {
-      setPasswordError(res.error);
-      setPasswordSaving(false);
-      return;
-    }
-    setPasswordDialogOpen(false);
-    setPasswordSaving(false);
-    setCurrentPassword("");
-    setNewPassword("");
+  if (isBarista) {
+    return (
+      <Link href="/scan/akun" className={cn("outline-none", triggerClass[variant])}>
+        <TriggerContent variant={variant} name={name} />
+      </Link>
+    );
   }
 
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className={cn(
-            "outline-none",
-            variant === "nav"
-              ? "flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground"
-              : "flex size-11 items-center justify-center gap-2 rounded-lg hover:bg-secondary focus-visible:bg-secondary"
-          )}
-        >
-          {variant === "nav" ? (
-            <>
-              <span className="flex size-8 items-center justify-center rounded-full transition-colors">
-                <CircleUserRound className="size-5" strokeWidth={2} />
-              </span>
-              Akun
-            </>
-          ) : (
-            <>
-              <Avatar>
-                <AvatarFallback>{initials(name)}</AvatarFallback>
-              </Avatar>
-              <span className="sr-only">Menu akun</span>
-            </>
-          )}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64">
-          <DropdownMenuGroup>
-            <DropdownMenuLabel className="flex flex-col gap-0.5 py-1.5">
-              <span className="text-sm font-semibold text-foreground">{name}</span>
-              <span className="truncate text-xs font-normal text-muted-foreground">
-                {email}
-              </span>
-            </DropdownMenuLabel>
-          </DropdownMenuGroup>
-          {isBarista && (
-            <DropdownMenuItem
-              nativeButton
-              className="min-h-11 gap-2.5 py-2.5 text-base"
-              render={<button type="button" className="w-full" />}
-              onClick={() => {
-                setNewName(name);
-                setError(undefined);
-                setNameDialogOpen(true);
-              }}
-            >
-              <Pencil className="size-4" />
-              Ubah Nama
-            </DropdownMenuItem>
-          )}
-          {isBarista && (
-            <DropdownMenuItem
-              nativeButton
-              className="min-h-11 gap-2.5 py-2.5 text-base"
-              render={<button type="button" className="w-full" />}
-              onClick={() => {
-                setCurrentPassword("");
-                setNewPassword("");
-                setPasswordError(undefined);
-                setPasswordDialogOpen(true);
-              }}
-            >
-              <KeyRound className="size-4" />
-              Ubah Kata Sandi
-            </DropdownMenuItem>
-          )}
-          {stats && (
-            <>
-              <DropdownMenuSeparator />
-              <div className="grid grid-cols-2 gap-2 px-1.5 py-2">
-                <div className="rounded-lg bg-secondary px-2.5 py-2">
-                  <p className="font-mono text-lg font-bold tabular-nums text-foreground">
-                    {stats.totalStamps}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Stempel diberikan
-                  </p>
-                </div>
-                <div className="rounded-lg bg-secondary px-2.5 py-2">
-                  <p className="font-mono text-lg font-bold tabular-nums text-foreground">
-                    {stats.totalClaims}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Reward dikonfirmasi
-                  </p>
-                </div>
-              </div>
-              <p className="px-2.5 pb-1.5 text-[11px] text-muted-foreground">
-                Bulan ini: {stats.stampsThisMonth} stempel &middot;{" "}
-                {stats.claimsThisMonth} reward
-              </p>
-            </>
-          )}
-          {outletName !== undefined && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                nativeButton
-                className="min-h-11 gap-2.5 py-2.5 text-base"
-                render={<Link href="/scan/pilih-outlet" />}
-              >
-                <Store className="size-4" />
-                <span className="flex-1 truncate">
-                  {outletName ?? "Pilih outlet"}
-                </span>
-                <span className="text-xs text-muted-foreground">Ganti</span>
-                <ChevronRight className="size-3.5 text-muted-foreground" />
-              </DropdownMenuItem>
-            </>
-          )}
-          <DropdownMenuSeparator />
-          <form action={logoutAction}>
-            <DropdownMenuItem
-              variant="destructive"
-              nativeButton
-              className="min-h-11 py-2.5 text-base"
-              render={<button type="submit" className="w-full" />}
-            >
-              <LogOut className="size-4" />
-              Keluar
-            </DropdownMenuItem>
-          </form>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      {isBarista && (
-        <Dialog open={nameDialogOpen} onOpenChange={setNameDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Ubah Nama</DialogTitle>
-              <DialogDescription>
-                Nama ini yang bakal kelihatan di riwayat scan dan klaim reward.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSaveName} className="flex flex-col gap-4">
-              <FormMessage error={error} />
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="new-name">Nama</Label>
-                <Input
-                  id="new-name"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  minLength={2}
-                  required
-                />
-              </div>
-              <DialogFooter>
-                <Button type="submit" disabled={saving}>
-                  {saving ? "Menyimpan..." : "Simpan"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {isBarista && (
-        <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Ubah Kata Sandi</DialogTitle>
-              <DialogDescription>
-                Masukkan kata sandi lama dulu buat konfirmasi sebelum diganti.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSavePassword} className="flex flex-col gap-4">
-              <FormMessage error={passwordError} />
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="current-password">Kata sandi lama</Label>
-                <PasswordInput
-                  id="current-password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="new-password">Kata sandi baru</Label>
-                <PasswordInput
-                  id="new-password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Minimal 8 karakter"
-                  minLength={8}
-                  required
-                />
-              </div>
-              <DialogFooter>
-                <Button type="submit" disabled={passwordSaving}>
-                  {passwordSaving ? "Menyimpan..." : "Simpan"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
-    </>
+    <DropdownMenu>
+      <DropdownMenuTrigger className={cn("outline-none", triggerClass[variant])}>
+        <TriggerContent variant={variant} name={name} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="flex flex-col gap-0.5 py-1.5">
+            <span className="text-sm font-semibold text-foreground">{name}</span>
+            <span className="truncate text-xs font-normal text-muted-foreground">
+              {email}
+            </span>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <form action={logoutAction}>
+          <DropdownMenuItem
+            variant="destructive"
+            nativeButton
+            className="min-h-11 py-2.5 text-base"
+            render={<button type="submit" className="w-full" />}
+          >
+            <LogOut className="size-4" />
+            Keluar
+          </DropdownMenuItem>
+        </form>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
