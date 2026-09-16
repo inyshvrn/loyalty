@@ -43,6 +43,27 @@ export async function confirmBaristaOutletAction(outletId: string | null) {
   redirect("/scan");
 }
 
+const nameSchema = z.string().trim().min(2, "Nama minimal 2 karakter").max(100);
+
+export type UpdateOwnNameResult = { ok: true } | { ok: false; error: string };
+
+/** Self-service — a barista renaming themselves, from the Akun menu. Pushes
+ * the new name into the session via unstable_update so it shows up right
+ * away, without needing to log out and back in. */
+export async function updateOwnNameAction(name: string): Promise<UpdateOwnNameResult> {
+  const barista = await requireBarista();
+
+  const parsed = nameSchema.safeParse(name);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Nama tidak valid." };
+  }
+
+  await prisma.user.update({ where: { id: barista.id }, data: { name: parsed.data } });
+  await unstable_update({ user: { name: parsed.data } });
+
+  return { ok: true };
+}
+
 export type CustomerStatus = {
   id: string;
   name: string;

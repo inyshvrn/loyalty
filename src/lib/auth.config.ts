@@ -53,8 +53,13 @@ export const authConfig: NextAuthConfig = {
         token.role = user.role;
         token.outletConfirmed = false;
       }
-      if (trigger === "update" && session?.user?.outletConfirmed) {
-        token.outletConfirmed = true;
+      if (trigger === "update") {
+        if (session?.user?.outletConfirmed) {
+          token.outletConfirmed = true;
+        }
+        if (session?.user?.name) {
+          token.name = session.user.name;
+        }
       }
       return token;
     },
