@@ -47,7 +47,7 @@ export function RequestInitialGrantDialog({
         return;
       }
       onRequested(res.data);
-      toast.success("Ajuan dikirim — menunggu approval admin.");
+      toast.success("Stempel diberikan — menunggu ditinjau admin.");
       setOpen(false);
     } finally {
       setPending(false);
@@ -71,8 +71,9 @@ export function RequestInitialGrantDialog({
           <DialogTitle>Ajukan Stempel Awal</DialogTitle>
           <DialogDescription>
             Untuk {customerName} yang transfer dari kartu kertas lama. Cek
-            dulu kartu fisiknya — jumlah ini baru aktif setelah admin
-            menyetujui, bukan langsung sekarang.
+            dulu kartu fisiknya — jumlah ini langsung aktif sekarang, tapi
+            admin tetap akan meninjau dan bisa membatalkannya kalau ternyata
+            tidak sesuai.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

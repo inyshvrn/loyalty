@@ -9,6 +9,7 @@ import {
   getStampThreshold,
   getProgressCutoff,
   getStampCountSince,
+  createGrantedStamps,
 } from "@/lib/loyalty";
 import { getStoreDayBounds, formatStoreTime } from "@/lib/store-time";
 import { sortByNameInsensitive } from "@/lib/utils";
@@ -347,9 +348,10 @@ export type RequestInitialGrantResult =
   | { ok: false; error: string };
 
 /** Submitted by a barista for a customer who's transferring stamps from an
- * old paper punch card — instead of digitizing proof, the physical card is
- * kept offline and an admin has to sign off before the stamps count for
- * real (see StampGrantRequest in schema.prisma). Only allowed while the
+ * old paper punch card. The stamps apply immediately — the customer's
+ * progress reflects them right away — but an admin still has to check the
+ * physical card and can cancel it (see cancelStampGrantRequestAction in
+ * admin.ts) if it turns out not to check out. Only allowed while the
  * customer has never received a single stamp, so it can't be reused as a
  * shortcut for extra stamps later. */
 export async function requestInitialStampGrantAction(
@@ -387,15 +389,17 @@ export async function requestInitialStampGrantAction(
     };
   }
 
-  await prisma.stampGrantRequest.create({
+  const outletId = scanningBarista?.outletId ?? null;
+  const request = await prisma.stampGrantRequest.create({
     data: {
       customerId,
       count: parsed.data.count,
       note: parsed.data.note || null,
       requestedByUserId: barista.id,
-      outletId: scanningBarista?.outletId ?? null,
+      outletId,
     },
   });
+  await createGrantedStamps(customerId, barista.id, outletId, parsed.data.count, request.id);
 
   const data = await buildCustomerStatus(customer);
   return { ok: true, data };

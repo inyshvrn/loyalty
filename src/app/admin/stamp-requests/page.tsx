@@ -15,8 +15,8 @@ export default async function StampRequestsPage() {
       </h1>
       <p className="mb-6 text-sm text-muted-foreground">
         Ajuan barista untuk kasih beberapa stempel sekaligus di kunjungan
-        pertama pelanggan (transfer dari kartu kertas lama). Cek kartu
-        fisiknya dulu sebelum menyetujui.
+        pertama pelanggan (transfer dari kartu kertas lama). Stempelnya sudah
+        langsung aktif — cek kartu fisiknya, lalu setujui atau batalkan.
       </p>
 
       <div className="mb-8">

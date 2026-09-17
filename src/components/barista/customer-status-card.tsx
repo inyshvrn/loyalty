@@ -38,7 +38,7 @@ export function CustomerStatusCard({
             )}
             {status.pendingGrantRequest && (
               <Badge variant="outline" className="shrink-0">
-                Menunggu approval &middot; +{status.pendingGrantRequest.count}
+                +{status.pendingGrantRequest.count} perlu ditinjau admin
               </Badge>
             )}
           </div>

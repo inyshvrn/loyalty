@@ -77,7 +77,14 @@ model Stamp {
   outlet             Outlet?  @relation("StampOutlet", fields: [outletId], references: [id])
   createdAt          DateTime @default(now())
 
+  /// Set only for stamps created by a StampGrantRequest (initial/physical-card
+  /// transfer) — lets an admin cancelling that request delete exactly these
+  /// stamps and no others, even if the customer has since received more.
+  grantRequestId     String?
+  grantRequest       StampGrantRequest? @relation(fields: [grantRequestId], references: [id])
+
   @@index([customerId])
+  @@index([grantRequestId])
 }
 
 enum RewardClaimStatus {
@@ -128,10 +135,14 @@ enum StampGrantStatus {
 /// self-registered instead of being migrated in by an admin. Only allowed
 /// while the customer has zero Stamp rows ever (checked in the action, not
 /// enforced here), so it can't become a backdoor for extra stamps later.
-/// A barista-submitted request needs an admin's approval before the stamps
-/// are actually created; an admin-submitted one is auto-approved (they don't
-/// need to approve their own request) but still recorded here for the same
-/// audit trail.
+/// The stamps are created immediately when a barista submits this (so the
+/// customer's progress reflects it right away) — PENDING here means "awaiting
+/// an admin's review of the physical card," not "not yet applied." An admin
+/// approving it is just a sign-off; rejecting it deletes the linked Stamp
+/// rows (see Stamp.grantRequestId). An admin-submitted grant skips the
+/// review step entirely (stored pre-APPROVED) since they don't need to
+/// approve their own request, but is still recorded here for the same audit
+/// trail.
 model StampGrantRequest {
   id                 String            @id @default(cuid())
   customerId         String
@@ -147,6 +158,7 @@ model StampGrantRequest {
   reviewedByAdminId  String?
   reviewedByAdmin    User?             @relation("StampGrantRequestReviewedBy", fields: [reviewedByAdminId], references: [id])
   reviewedAt         DateTime?
+  stamps             Stamp[]
 
   @@index([customerId])
   @@index([status])

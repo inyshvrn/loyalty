@@ -6,7 +6,12 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getStoreDayBounds, formatStoreTime } from "@/lib/store-time";
-import { getStampThreshold, getProgressCutoff, getStampCountSince } from "@/lib/loyalty";
+import {
+  getStampThreshold,
+  getProgressCutoff,
+  getStampCountSince,
+  createGrantedStamps,
+} from "@/lib/loyalty";
 import { phoneSchema } from "@/lib/validators";
 
 async function requireAdmin() {
@@ -510,27 +515,9 @@ export async function cancelClaimAction(claimId: string): Promise<CorrectionResu
 
 // ---- Initial stamp grants (physical card transfer) ----
 
-/** Backdates each stamp to its own day in the past (ending yesterday, never
- * today) so a bulk historical grant never eats the customer's "1 stamp per
- * day" slot for an actual visit that happens the same day it's approved. */
-async function createGrantedStamps(
-  customerId: string,
-  scannedByBaristaId: string,
-  outletId: string | null,
-  count: number
-) {
-  const now = Date.now();
-  const dayMs = 24 * 60 * 60 * 1000;
-  await prisma.stamp.createMany({
-    data: Array.from({ length: count }, (_, i) => ({
-      customerId,
-      scannedByBaristaId,
-      outletId,
-      createdAt: new Date(now - (count - i) * dayMs),
-    })),
-  });
-}
-
+/** The stamps already exist by the time this runs (created up front when the
+ * barista submitted the request — see requestInitialStampGrantAction), so
+ * approving is just a review sign-off, not what makes the stamps count. */
 export async function approveStampGrantRequestAction(
   requestId: string
 ): Promise<CorrectionResult> {
@@ -544,12 +531,6 @@ export async function approveStampGrantRequestAction(
     return { ok: false, error: "Ajuan ini sudah diproses sebelumnya." };
   }
 
-  await createGrantedStamps(
-    request.customerId,
-    request.requestedByUserId,
-    request.outletId,
-    request.count
-  );
   await prisma.stampGrantRequest.update({
     where: { id: requestId },
     data: { status: "APPROVED", reviewedByAdminId: admin.id, reviewedAt: new Date() },
@@ -560,7 +541,12 @@ export async function approveStampGrantRequestAction(
   return { ok: true };
 }
 
-export async function rejectStampGrantRequestAction(
+/** Reverses an already-applied grant: deletes exactly the Stamp rows it
+ * created (via Stamp.grantRequestId) and marks the request rejected. If the
+ * customer has already gone on to claim a reward that counted these stamps,
+ * this doesn't try to unwind that — same trust level as removeStampAction/
+ * cancelClaimAction, both of which leave that judgment call to the admin. */
+export async function cancelStampGrantRequestAction(
   requestId: string
 ): Promise<CorrectionResult> {
   const admin = await requireAdmin();
@@ -573,12 +559,16 @@ export async function rejectStampGrantRequestAction(
     return { ok: false, error: "Ajuan ini sudah diproses sebelumnya." };
   }
 
-  await prisma.stampGrantRequest.update({
-    where: { id: requestId },
-    data: { status: "REJECTED", reviewedByAdminId: admin.id, reviewedAt: new Date() },
-  });
+  await prisma.$transaction([
+    prisma.stamp.deleteMany({ where: { grantRequestId: requestId } }),
+    prisma.stampGrantRequest.update({
+      where: { id: requestId },
+      data: { status: "REJECTED", reviewedByAdminId: admin.id, reviewedAt: new Date() },
+    }),
+  ]);
 
   revalidatePath("/admin/stamp-requests");
+  revalidatePath(`/admin/customers/${request.customerId}`);
   return { ok: true };
 }
 

@@ -237,6 +237,32 @@ export function countPendingStampGrantRequests() {
   return prisma.stampGrantRequest.count({ where: { status: "PENDING" } });
 }
 
+/** Backdates each stamp to its own day in the past (ending yesterday, never
+ * today) so a bulk historical grant never eats the customer's "1 stamp per
+ * day" slot for an actual visit that happens the same day it's granted.
+ * `grantRequestId`, when given, links each created Stamp back to the
+ * StampGrantRequest that produced it, so cancelling that request later can
+ * delete exactly these stamps and no others. */
+export async function createGrantedStamps(
+  customerId: string,
+  scannedByBaristaId: string,
+  outletId: string | null,
+  count: number,
+  grantRequestId: string | null = null
+) {
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+  await prisma.stamp.createMany({
+    data: Array.from({ length: count }, (_, i) => ({
+      customerId,
+      scannedByBaristaId,
+      outletId,
+      grantRequestId,
+      createdAt: new Date(now - (count - i) * dayMs),
+    })),
+  });
+}
+
 /** Pending requests first (oldest first, so the queue clears in submission
  * order), then a recent slice of already-reviewed ones for context. */
 export async function getStampGrantRequests(reviewedLimit = 20) {
