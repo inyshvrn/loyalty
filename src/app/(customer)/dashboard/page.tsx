@@ -4,8 +4,10 @@ import QRCode from "qrcode";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { LoyaltyCard } from "@/components/loyalty-card";
+import { ReferralCard } from "@/components/referral-card";
 import { Card } from "@/components/ui/card";
 import { getCustomerProgress, getRecentStamps } from "@/lib/loyalty";
+import { getReferralStats } from "@/lib/referral";
 import { formatRelativeIndonesian } from "@/lib/format";
 
 export default async function CustomerDashboardPage() {
@@ -13,9 +15,10 @@ export default async function CustomerDashboardPage() {
   if (!session?.user) redirect("/login");
 
   const customerId = session.user.id;
-  const [progress, recentStamps] = await Promise.all([
+  const [progress, recentStamps, referralStats] = await Promise.all([
     getCustomerProgress(customerId),
     getRecentStamps(customerId, 3),
+    getReferralStats(customerId),
   ]);
 
   let qrDataUrl: string | null = null;
@@ -71,6 +74,12 @@ export default async function CustomerDashboardPage() {
           </Card>
         )}
       </div>
+
+      <ReferralCard
+        code={referralStats.code}
+        referralCount={referralStats.referralCount}
+        availableCredits={referralStats.availableCredits}
+      />
     </div>
   );
 }

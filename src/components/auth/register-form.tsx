@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/auth/form-message";
 import { registerAction, type ActionState } from "@/lib/actions/auth";
 
-export function RegisterForm() {
+export function RegisterForm({
+  defaultReferralCode,
+}: {
+  defaultReferralCode?: string;
+}) {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     registerAction,
     null
@@ -20,6 +24,7 @@ export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [referralCode, setReferralCode] = useState(defaultReferralCode ?? "");
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -69,6 +74,16 @@ export function RegisterForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="referralCode">Kode referral (opsional)</Label>
+        <Input
+          id="referralCode"
+          name="referralCode"
+          placeholder="Contoh: AB12CD"
+          value={referralCode}
+          onChange={(e) => setReferralCode(e.target.value)}
         />
       </div>
       <Button className="mt-1 h-11" type="submit" disabled={isPending}>

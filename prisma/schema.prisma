@@ -30,6 +30,7 @@ model Outlet {
   stamps   Stamp[] @relation("StampOutlet")
 
   stampGrantRequests StampGrantRequest[] @relation("StampGrantRequestOutlet")
+  referralCredits    ReferralCredit[]    @relation("ReferralCreditOutlet")
 }
 
 model User {
@@ -60,6 +61,23 @@ model User {
   stampGrantRequestsReceived  StampGrantRequest[] @relation("StampGrantRequestCustomer")
   stampGrantRequestsRequested StampGrantRequest[] @relation("StampGrantRequestRequestedBy")
   stampGrantRequestsReviewed  StampGrantRequest[] @relation("StampGrantRequestReviewedBy")
+
+  /// Only ever set for role CUSTOMER — staff never get one. Generated once
+  /// at account creation (self-registration or admin migration) and never
+  /// changes.
+  referralCode String? @unique
+  /// The referrer whose code this user registered with, if any — captured
+  /// once at registration and never changed afterward. A credit is only
+  /// granted to referredBy once THIS user's email becomes verified (see
+  /// ReferralCredit), not at raw registration.
+  referredById String?
+  referredBy   User?   @relation("Referrals", fields: [referredById], references: [id])
+  referrals    User[]  @relation("Referrals")
+
+  referralCreditsEarned    ReferralCredit[] @relation("ReferrerCredits")
+  referralCreditsFromMe    ReferralCredit[] @relation("ReferredUserCredits")
+  referralCreditsRedeemed  ReferralCredit[] @relation("BaristaRedeemedCredits")
+  referralCreditsCancelled ReferralCredit[] @relation("AdminCancelledReferralCredits")
 }
 
 /// One row per QR scan. Current progress toward the threshold is derived —
@@ -80,8 +98,8 @@ model Stamp {
   /// Set only for stamps created by a StampGrantRequest (initial/physical-card
   /// transfer) — lets an admin cancelling that request delete exactly these
   /// stamps and no others, even if the customer has since received more.
-  grantRequestId     String?
-  grantRequest       StampGrantRequest? @relation(fields: [grantRequestId], references: [id])
+  grantRequestId String?
+  grantRequest   StampGrantRequest? @relation(fields: [grantRequestId], references: [id])
 
   @@index([customerId])
   @@index([grantRequestId])
@@ -119,9 +137,14 @@ model RewardClaim {
 
 /// Single-row config table — application code always reads/writes id 1.
 model LoyaltySetting {
-  id             Int      @id @default(1)
-  stampThreshold Int      @default(7)
-  updatedAt      DateTime @updatedAt
+  id                    Int          @id @default(1)
+  stampThreshold        Int          @default(7)
+  /// Discount awarded per successful referral — snapshotted onto each
+  /// ReferralCredit at the moment it's earned, so changing this later never
+  /// retroactively alters a credit already earned but not yet redeemed.
+  referralDiscountType  DiscountType @default(PERCENT)
+  referralDiscountValue Int          @default(10)
+  updatedAt             DateTime     @updatedAt
 }
 
 enum StampGrantStatus {
@@ -144,22 +167,81 @@ enum StampGrantStatus {
 /// approve their own request, but is still recorded here for the same audit
 /// trail.
 model StampGrantRequest {
-  id                 String            @id @default(cuid())
-  customerId         String
-  customer           User              @relation("StampGrantRequestCustomer", fields: [customerId], references: [id])
-  count              Int
-  note               String?
-  requestedByUserId  String
-  requestedByUser    User              @relation("StampGrantRequestRequestedBy", fields: [requestedByUserId], references: [id])
-  outletId           String?
-  outlet             Outlet?           @relation("StampGrantRequestOutlet", fields: [outletId], references: [id])
-  status             StampGrantStatus  @default(PENDING)
-  createdAt          DateTime          @default(now())
-  reviewedByAdminId  String?
-  reviewedByAdmin    User?             @relation("StampGrantRequestReviewedBy", fields: [reviewedByAdminId], references: [id])
-  reviewedAt         DateTime?
-  stamps             Stamp[]
+  id                String           @id @default(cuid())
+  customerId        String
+  customer          User             @relation("StampGrantRequestCustomer", fields: [customerId], references: [id])
+  count             Int
+  note              String?
+  requestedByUserId String
+  requestedByUser   User             @relation("StampGrantRequestRequestedBy", fields: [requestedByUserId], references: [id])
+  outletId          String?
+  outlet            Outlet?          @relation("StampGrantRequestOutlet", fields: [outletId], references: [id])
+  status            StampGrantStatus @default(PENDING)
+  createdAt         DateTime         @default(now())
+  reviewedByAdminId String?
+  reviewedByAdmin   User?            @relation("StampGrantRequestReviewedBy", fields: [reviewedByAdminId], references: [id])
+  reviewedAt        DateTime?
+  stamps            Stamp[]
 
   @@index([customerId])
   @@index([status])
+}
+
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
+enum ReferralCreditStatus {
+  AVAILABLE
+  REDEEMED
+  CANCELLED
+}
+
+/// One discount credit earned by a customer (the referrer) when a friend
+/// they referred becomes email-verified — mirrors the emailVerified gate
+/// already used for barista stamping, so an unverified signup can't farm
+/// credits. Credits never combine: each successful referral produces its
+/// own row, and a barista can redeem exactly one per visit (the oldest
+/// AVAILABLE one, FIFO). discountType/discountValue are snapshotted from
+/// LoyaltySetting at the moment the credit is earned, so a later admin
+/// change to the global referral discount never retroactively changes an
+/// already-earned, unredeemed credit. Never hard-deleted — same
+/// status-based correction pattern as RewardClaim, since a redeemed credit
+/// represents a discount already given away, not a mistake to erase.
+/// status has three real transitions: AVAILABLE -> REDEEMED (barista spends
+/// it), REDEEMED -> AVAILABLE (admin corrects a mistaken redemption —
+/// clears the redemption fields, cancelledAt/cancelledByAdminId become a
+/// pure "this was corrected" audit marker), and AVAILABLE -> CANCELLED (an
+/// admin permanently voids an unredeemed credit, e.g. suspected fraud —
+/// terminal, never spendable again).
+model ReferralCredit {
+  id             String               @id @default(cuid())
+  referrerId     String
+  referrer       User                 @relation("ReferrerCredits", fields: [referrerId], references: [id])
+  /// The referred friend whose email verification earned this credit — kept
+  /// for audit/traceability even though the credit itself belongs to the
+  /// referrer. @unique so a race on the verify-email link can never mint
+  /// two credits for the same referred friend.
+  referredUserId String               @unique
+  referredUser   User                 @relation("ReferredUserCredits", fields: [referredUserId], references: [id])
+  discountType   DiscountType
+  discountValue  Int
+  status         ReferralCreditStatus @default(AVAILABLE)
+  createdAt      DateTime             @default(now())
+
+  redeemedAt          DateTime?
+  redeemedByBaristaId String?
+  redeemedByBarista   User?     @relation("BaristaRedeemedCredits", fields: [redeemedByBaristaId], references: [id])
+  outletId            String?
+  outlet              Outlet?   @relation("ReferralCreditOutlet", fields: [outletId], references: [id])
+
+  /// Set by either correction action below — the only permanent trace that
+  /// a correction happened, and by whom. See the model doc comment above
+  /// for what each status transition means.
+  cancelledAt        DateTime?
+  cancelledByAdminId String?
+  cancelledByAdmin   User?     @relation("AdminCancelledReferralCredits", fields: [cancelledByAdminId], references: [id])
+
+  @@index([referrerId])
 }

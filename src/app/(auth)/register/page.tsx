@@ -2,7 +2,10 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { RegisterForm } from "@/components/auth/register-form";
 
-export default function RegisterPage() {
+export default async function RegisterPage(props: PageProps<"/register">) {
+  const searchParams = await props.searchParams;
+  const ref = typeof searchParams.ref === "string" ? searchParams.ref : undefined;
+
   return (
     <Card>
       <CardHeader>
@@ -12,7 +15,7 @@ export default function RegisterPage() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <RegisterForm />
+        <RegisterForm defaultReferralCode={ref} />
         <p className="text-center text-[13px] text-muted-foreground">
           Sudah punya akun?{" "}
           <Link href="/login" className="font-semibold text-foreground underline-offset-4 hover:underline">

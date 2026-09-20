@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RequestInitialGrantDialog } from "@/components/barista/request-initial-grant-dialog";
 import { ConfirmRewardDialog } from "@/components/barista/confirm-reward-dialog";
+import { RedeemReferralCreditDialog } from "@/components/barista/redeem-referral-credit-dialog";
 import type { CustomerStatus } from "@/lib/actions/barista";
 
 export function CustomerStatusCard({
@@ -11,12 +12,14 @@ export function CustomerStatusCard({
   onAddStamp,
   onConfirmReward,
   onGrantRequested,
+  onRedeemCredit,
 }: {
   status: CustomerStatus;
   busy: boolean;
   onAddStamp: () => void;
   onConfirmReward: () => void;
   onGrantRequested?: (data: CustomerStatus) => void;
+  onRedeemCredit: () => void;
 }) {
   return (
     <Card className="flex-col gap-3 p-4">
@@ -39,6 +42,11 @@ export function CustomerStatusCard({
             {status.pendingGrantRequest && (
               <Badge variant="outline" className="shrink-0">
                 +{status.pendingGrantRequest.count} perlu ditinjau admin
+              </Badge>
+            )}
+            {status.availableReferralCredits > 0 && (
+              <Badge variant="outline" className="shrink-0">
+                Diskon Referral &times;{status.availableReferralCredits}
               </Badge>
             )}
           </div>
@@ -76,6 +84,14 @@ export function CustomerStatusCard({
           customerName={status.name}
           busy={busy}
           onConfirm={onConfirmReward}
+        />
+      )}
+      {status.availableReferralCredits > 0 && (
+        <RedeemReferralCreditDialog
+          customerId={status.id}
+          customerName={status.name}
+          busy={busy}
+          onRedeem={onRedeemCredit}
         />
       )}
     </Card>

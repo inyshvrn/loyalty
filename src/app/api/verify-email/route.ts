@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyVerificationToken } from "@/lib/verification-token";
+import { getReferralDiscountSetting } from "@/lib/referral";
 
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token");
@@ -23,10 +24,29 @@ export async function GET(request: NextRequest) {
     }
 
     if (!user.emailVerified) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { emailVerified: true },
-      });
+      // A referral credit is only granted once the referred friend's email
+      // is actually verified (not at raw registration) — same anti-abuse
+      // gate the app already uses for barista stamping, so a junk
+      // unverified signup can't farm credits for whoever referred it.
+      if (user.referredById) {
+        const { discountType, discountValue } = await getReferralDiscountSetting();
+        await prisma.$transaction([
+          prisma.user.update({ where: { id: userId }, data: { emailVerified: true } }),
+          prisma.referralCredit.create({
+            data: {
+              referrerId: user.referredById,
+              referredUserId: user.id,
+              discountType,
+              discountValue,
+            },
+          }),
+        ]);
+      } else {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { emailVerified: true },
+        });
+      }
     }
 
     return toVerifyEmail("success");

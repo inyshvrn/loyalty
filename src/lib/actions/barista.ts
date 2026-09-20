@@ -120,18 +120,25 @@ export type CustomerStatus = {
    * one case an initial bulk grant (physical-card transfer) makes sense. */
   eligibleForInitialGrant: boolean;
   pendingGrantRequest: { id: string; count: number; createdAt: Date } | null;
+  /** Number of AVAILABLE referral credits this customer (as a referrer) can
+   * redeem right now — see redeemReferralCreditAction below. */
+  availableReferralCredits: number;
 };
 
 async function buildCustomerStatus(customer: User): Promise<CustomerStatus> {
-  const [threshold, lastClaimAt, everStampCount, pendingGrant] = await Promise.all([
-    getStampThreshold(),
-    getProgressCutoff(customer.id),
-    prisma.stamp.count({ where: { customerId: customer.id } }),
-    prisma.stampGrantRequest.findFirst({
-      where: { customerId: customer.id, status: "PENDING" },
-      select: { id: true, count: true, createdAt: true },
-    }),
-  ]);
+  const [threshold, lastClaimAt, everStampCount, pendingGrant, availableReferralCredits] =
+    await Promise.all([
+      getStampThreshold(),
+      getProgressCutoff(customer.id),
+      prisma.stamp.count({ where: { customerId: customer.id } }),
+      prisma.stampGrantRequest.findFirst({
+        where: { customerId: customer.id, status: "PENDING" },
+        select: { id: true, count: true, createdAt: true },
+      }),
+      prisma.referralCredit.count({
+        where: { referrerId: customer.id, status: "AVAILABLE" },
+      }),
+    ]);
   const stamps = await getStampCountSince(customer.id, lastClaimAt);
   return {
     id: customer.id,
@@ -144,6 +151,7 @@ async function buildCustomerStatus(customer: User): Promise<CustomerStatus> {
     eligible: stamps >= threshold,
     eligibleForInitialGrant: everStampCount === 0 && !pendingGrant,
     pendingGrantRequest: pendingGrant,
+    availableReferralCredits,
   };
 }
 
@@ -330,6 +338,80 @@ export async function getClaimHistorySummary(
   ]);
 
   return { totalClaims, lastClaimAt: last?.claimedAt ?? null };
+}
+
+// ---- Referral credit redemption ----
+
+export type OldestAvailableCredit = {
+  id: string;
+  discountType: "PERCENT" | "FIXED";
+  discountValue: number;
+  createdAt: Date;
+} | null;
+
+/** Fetched on demand when a barista opens the redeem dialog — same reason
+ * getClaimHistorySummary is fetched separately rather than folded into
+ * CustomerStatus: only needed for the one customer actually being redeemed,
+ * not every row in a search list. Shows the exact snapshotted amount, which
+ * can differ from the current admin setting if it was earned a while ago. */
+export async function getOldestAvailableCredit(
+  customerId: string
+): Promise<OldestAvailableCredit> {
+  await requireBarista();
+
+  const credit = await prisma.referralCredit.findFirst({
+    where: { referrerId: customerId, status: "AVAILABLE" },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, discountType: true, discountValue: true, createdAt: true },
+  });
+  return credit ?? null;
+}
+
+export type RedeemReferralCreditResult =
+  | { ok: true; data: CustomerStatus }
+  | { ok: false; error: string };
+
+/** Redeems exactly one credit — the oldest AVAILABLE one (FIFO), no barista
+ * choice needed since every credit for a given customer is worth the same
+ * snapshotted amount it was earned with. */
+export async function redeemReferralCreditAction(
+  customerId: string
+): Promise<RedeemReferralCreditResult> {
+  const barista = await requireBarista();
+
+  const customer = await prisma.user.findUnique({ where: { id: customerId } });
+  if (!customer || customer.role !== "CUSTOMER") {
+    return { ok: false, error: "Pelanggan tidak ditemukan." };
+  }
+  if (!customer.emailVerified) {
+    return { ok: false, error: "Pelanggan belum verifikasi email." };
+  }
+
+  const credit = await prisma.referralCredit.findFirst({
+    where: { referrerId: customerId, status: "AVAILABLE" },
+    orderBy: { createdAt: "asc" },
+  });
+  if (!credit) {
+    return { ok: false, error: "Pelanggan tidak punya diskon referral yang tersedia." };
+  }
+
+  const scanningBarista = await prisma.user.findUnique({
+    where: { id: barista.id },
+    select: { outletId: true },
+  });
+
+  await prisma.referralCredit.update({
+    where: { id: credit.id },
+    data: {
+      status: "REDEEMED",
+      redeemedAt: new Date(),
+      redeemedByBaristaId: barista.id,
+      outletId: scanningBarista?.outletId ?? null,
+    },
+  });
+
+  const data = await buildCustomerStatus(customer);
+  return { ok: true, data };
 }
 
 // ---- Initial stamp grant (physical card transfer) ----

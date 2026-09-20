@@ -12,10 +12,12 @@ import {
   getRecentStampsWithStaff,
   getRecentClaimsWithStaff,
 } from "@/lib/loyalty";
-import { formatRelativeIndonesian } from "@/lib/format";
+import { getReferralCreditsForAdmin } from "@/lib/referral";
+import { formatRelativeIndonesian, formatDiscountAmount } from "@/lib/format";
 import { AddManualStampButton } from "@/components/admin/add-manual-stamp-button";
 import { RemoveStampButton } from "@/components/admin/remove-stamp-button";
 import { CancelClaimButton } from "@/components/admin/cancel-claim-button";
+import { ReferralCreditActions } from "@/components/admin/referral-credit-actions";
 import { EditCustomerDialog } from "@/components/admin/edit-customer-dialog";
 import { DeleteCustomerButton } from "@/components/admin/delete-customer-button";
 import { ViewQrDialog } from "@/components/admin/view-qr-dialog";
@@ -32,11 +34,12 @@ export default async function AdminCustomerDetailPage(
   }
 
   const threshold = await getStampThreshold();
-  const [progress, stamps, claims, everStampCount] = await Promise.all([
+  const [progress, stamps, claims, everStampCount, referralCredits] = await Promise.all([
     getCustomerProgressWithThreshold(id, threshold),
     getRecentStampsWithStaff(id, 30),
     getRecentClaimsWithStaff(id, 30),
     prisma.stamp.count({ where: { customerId: id } }),
+    getReferralCreditsForAdmin(id, 30),
   ]);
 
   let qrDataUrl: string | null = null;
@@ -98,9 +101,10 @@ export default async function AdminCustomerDetailPage(
       </div>
 
       <Tabs defaultValue="visits">
-        <TabsList className="w-full max-w-xs">
+        <TabsList className="w-full max-w-md">
           <TabsTrigger value="visits">Kunjungan</TabsTrigger>
           <TabsTrigger value="claims">Reward</TabsTrigger>
+          <TabsTrigger value="referrals">Referral</TabsTrigger>
         </TabsList>
 
         <TabsContent value="visits" className="mt-4">
@@ -162,6 +166,59 @@ export default async function AdminCustomerDetailPage(
                   {c.status === "CONFIRMED" && (
                     <CancelClaimButton claimId={c.id} />
                   )}
+                </div>
+              ))}
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="referrals" className="mt-4">
+          {referralCredits.length === 0 ? (
+            <Card className="px-4 py-6 text-center text-sm text-muted-foreground">
+              Belum ada teman yang memakai kode referral pelanggan ini.
+            </Card>
+          ) : (
+            <Card className="divide-y divide-border p-0">
+              {referralCredits.map((credit) => (
+                <div
+                  key={credit.id}
+                  className="flex items-center justify-between px-4 py-3 text-sm"
+                >
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {credit.referredUser.name}
+                      {" · "}
+                      Diskon {formatDiscountAmount(credit.discountType, credit.discountValue)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatRelativeIndonesian(credit.createdAt)}
+                      {credit.status === "REDEEMED" && credit.redeemedByBarista && (
+                        <>
+                          {" · dipakai oleh "}
+                          {credit.redeemedByBarista.name}
+                          {credit.outlet && ` · ${credit.outlet.name}`}
+                        </>
+                      )}
+                      {credit.status === "CANCELLED" && credit.cancelledByAdmin && (
+                        <>
+                          {" · dibatalkan oleh "}
+                          {credit.cancelledByAdmin.name}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Badge
+                      variant={credit.status === "AVAILABLE" ? "secondary" : "outline"}
+                    >
+                      {credit.status === "AVAILABLE"
+                        ? "Tersedia"
+                        : credit.status === "REDEEMED"
+                          ? "Dipakai"
+                          : "Dibatalkan"}
+                    </Badge>
+                    <ReferralCreditActions creditId={credit.id} status={credit.status} />
+                  </div>
                 </div>
               ))}
             </Card>

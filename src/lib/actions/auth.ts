@@ -17,6 +17,7 @@ import {
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/email";
 import { roleHome } from "@/lib/role-home";
 import { phoneSchema } from "@/lib/validators";
+import { createUniqueReferralCode } from "@/lib/referral";
 
 const baseUrl = process.env.AUTH_URL ?? "http://localhost:3000";
 
@@ -35,6 +36,7 @@ const registerSchema = z.object({
   email: z.string().trim().toLowerCase().email("Format email tidak valid"),
   phone: phoneSchema,
   password: z.string().min(8, "Kata sandi minimal 8 karakter"),
+  referralCode: z.union([z.literal(""), z.string().trim().max(20)]).optional(),
 });
 
 export async function registerAction(
@@ -46,13 +48,14 @@ export async function registerAction(
     email: formData.get("email"),
     phone: formData.get("phone"),
     password: formData.get("password"),
+    referralCode: formData.get("referralCode") ?? "",
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
   }
 
-  const { name, email, phone, password } = parsed.data;
+  const { name, email, phone, password, referralCode } = parsed.data;
 
   try {
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -70,9 +73,29 @@ export async function registerAction(
         return { error: "Nomor HP ini sudah terdaftar di akun lain." };
       }
 
+      let referrerId: string | null = null;
+      if (referralCode) {
+        const referrer = await prisma.user.findFirst({
+          where: { referralCode: { equals: referralCode, mode: "insensitive" }, role: "CUSTOMER" },
+          select: { id: true },
+        });
+        if (!referrer) {
+          return { error: "Kode referral tidak ditemukan." };
+        }
+        referrerId = referrer.id;
+      }
+
       const passwordHash = await bcrypt.hash(password, 12);
       const user = await prisma.user.create({
-        data: { name, email, phone, passwordHash, role: "CUSTOMER" },
+        data: {
+          name,
+          email,
+          phone,
+          passwordHash,
+          role: "CUSTOMER",
+          referralCode: await createUniqueReferralCode(),
+          referredById: referrerId,
+        },
       });
       await issueAndSendVerification(user.id, user.email);
     }

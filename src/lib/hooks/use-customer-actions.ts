@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { addStampAction, confirmRewardAction, type CustomerStatus } from "@/lib/actions/barista";
+import {
+  addStampAction,
+  confirmRewardAction,
+  redeemReferralCreditAction,
+  type CustomerStatus,
+} from "@/lib/actions/barista";
 
 export function useCustomerActions(onUpdate: (data: CustomerStatus) => void) {
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -49,5 +54,24 @@ export function useCustomerActions(onUpdate: (data: CustomerStatus) => void) {
     }
   }
 
-  return { busyId, handleAddStamp, handleConfirmReward };
+  async function handleRedeemCredit(customerId: string) {
+    setBusyId(customerId);
+    try {
+      const res = await redeemReferralCreditAction(customerId);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      onUpdate(res.data);
+      toast.success("Diskon referral diterapkan", {
+        description: res.data.name,
+      });
+    } catch {
+      toast.error("Terjadi kesalahan. Coba lagi.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return { busyId, handleAddStamp, handleConfirmReward, handleRedeemCredit };
 }

@@ -12,6 +12,7 @@ import {
   getStampCountSince,
   createGrantedStamps,
 } from "@/lib/loyalty";
+import { createUniqueReferralCode } from "@/lib/referral";
 import { phoneSchema } from "@/lib/validators";
 
 async function requireAdmin() {
@@ -283,6 +284,46 @@ export async function updateThresholdAction(
   return { success: `Target stempel diperbarui menjadi ${parsed.data}.` };
 }
 
+const referralDiscountSchema = z
+  .object({
+    referralDiscountType: z.enum(["PERCENT", "FIXED"]),
+    referralDiscountValue: z.coerce.number().int().min(1, "Minimal 1"),
+  })
+  .refine(
+    (data) => data.referralDiscountType !== "PERCENT" || data.referralDiscountValue <= 100,
+    { message: "Maksimal 100 untuk persen", path: ["referralDiscountValue"] }
+  );
+
+export async function updateReferralDiscountAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const parsed = referralDiscountSchema.safeParse({
+    referralDiscountType: formData.get("referralDiscountType"),
+    referralDiscountValue: formData.get("referralDiscountValue"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Nilai tidak valid" };
+  }
+
+  await prisma.loyaltySetting.upsert({
+    where: { id: 1 },
+    update: parsed.data,
+    create: { id: 1, ...parsed.data },
+  });
+
+  revalidatePath("/admin/settings");
+  return {
+    success: `Diskon referral diperbarui menjadi ${
+      parsed.data.referralDiscountType === "PERCENT"
+        ? `${parsed.data.referralDiscountValue}%`
+        : `Rp${parsed.data.referralDiscountValue.toLocaleString("id-ID")}`
+    }.`,
+  };
+}
+
 // ---- Customer migration (paper-card customers moving to the app) ----
 
 const migrateCustomerSchema = z.object({
@@ -330,6 +371,7 @@ export async function migrateCustomerAction(
       passwordHash,
       role: "CUSTOMER",
       emailVerified: true, // admin registers them in person, no self-verification needed
+      referralCode: await createUniqueReferralCode(),
     },
   });
 
@@ -510,6 +552,74 @@ export async function cancelClaimAction(claimId: string): Promise<CorrectionResu
   });
 
   revalidatePath(`/admin/customers/${claim.customerId}`);
+  return { ok: true };
+}
+
+// ---- Referral credit corrections ----
+
+/** A barista redeemed a credit by mistake — reverts it back to spendable,
+ * clearing the redemption fields. cancelledAt/cancelledByAdminId stay as a
+ * permanent "this was corrected" audit marker even though status ends up
+ * AVAILABLE again. */
+export async function cancelReferralCreditRedemptionAction(
+  creditId: string
+): Promise<CorrectionResult> {
+  const admin = await requireAdmin();
+
+  const credit = await prisma.referralCredit.findUnique({ where: { id: creditId } });
+  if (!credit) {
+    return { ok: false, error: "Kredit diskon tidak ditemukan." };
+  }
+  if (credit.status !== "REDEEMED") {
+    return { ok: false, error: "Kredit ini belum pernah dipakai." };
+  }
+
+  await prisma.referralCredit.update({
+    where: { id: creditId },
+    data: {
+      status: "AVAILABLE",
+      redeemedAt: null,
+      redeemedByBaristaId: null,
+      outletId: null,
+      cancelledAt: new Date(),
+      cancelledByAdminId: admin.id,
+    },
+  });
+
+  revalidatePath(`/admin/customers/${credit.referrerId}`);
+  return { ok: true };
+}
+
+/** Permanently voids a credit that hasn't been redeemed yet — e.g. a
+ * referral later found to be fraudulent. Terminal: unlike the correction
+ * above, a CANCELLED credit never becomes spendable again. */
+export async function voidReferralCreditAction(creditId: string): Promise<CorrectionResult> {
+  const admin = await requireAdmin();
+
+  const credit = await prisma.referralCredit.findUnique({ where: { id: creditId } });
+  if (!credit) {
+    return { ok: false, error: "Kredit diskon tidak ditemukan." };
+  }
+  if (credit.status !== "AVAILABLE") {
+    return {
+      ok: false,
+      error:
+        credit.status === "CANCELLED"
+          ? "Kredit ini sudah dibatalkan sebelumnya."
+          : "Kredit ini sudah dipakai — batalkan pemakaiannya dulu kalau mau dibatalkan permanen.",
+    };
+  }
+
+  await prisma.referralCredit.update({
+    where: { id: creditId },
+    data: {
+      status: "CANCELLED",
+      cancelledAt: new Date(),
+      cancelledByAdminId: admin.id,
+    },
+  });
+
+  revalidatePath(`/admin/customers/${credit.referrerId}`);
   return { ok: true };
 }
 
