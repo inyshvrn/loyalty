@@ -5,11 +5,11 @@ export const DEFAULT_REFERRAL_DISCOUNT_TYPE: DiscountType = "PERCENT";
 export const DEFAULT_REFERRAL_DISCOUNT_VALUE = 10;
 
 // Excludes 0/O and 1/I/L — easy to read back over a counter without
-// transcription errors. ~1.07 billion combinations at length 6, more than
+// transcription errors. ~34 billion combinations at length 7, more than
 // enough headroom for a single shop that collisions are effectively never
 // going to happen in practice.
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-const CODE_LENGTH = 6;
+const CODE_LENGTH = 7;
 
 function randomCode(): string {
   let code = "";
@@ -57,7 +57,17 @@ export async function getReferralStats(customerId: string): Promise<ReferralStat
     prisma.user.count({ where: { referredById: customerId } }),
     prisma.referralCredit.count({ where: { referrerId: customerId, status: "AVAILABLE" } }),
   ]);
-  return { code: user?.referralCode ?? null, referralCount, availableCredits };
+
+  // Self-healing backfill: any customer who registered before this feature
+  // shipped has no code yet. Generate one the first time their stats are
+  // read (dashboard visit) instead of needing a one-off migration script.
+  let code = user?.referralCode ?? null;
+  if (!code) {
+    code = await createUniqueReferralCode();
+    await prisma.user.update({ where: { id: customerId }, data: { referralCode: code } });
+  }
+
+  return { code, referralCount, availableCredits };
 }
 
 export function getReferralCreditsForCustomer(customerId: string, limit = 50) {
