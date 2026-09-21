@@ -453,16 +453,26 @@ export async function deleteCustomerAction(userId: string): Promise<CorrectionRe
     return { ok: false, error: "Pelanggan tidak ditemukan." };
   }
 
-  const [stampCount, claimCount, grantRequestCount] = await Promise.all([
+  const [stampCount, claimCount, grantRequestCount, referralCreditCount] = await Promise.all([
     prisma.stamp.count({ where: { customerId: userId } }),
     prisma.rewardClaim.count({ where: { customerId: userId } }),
     prisma.stampGrantRequest.count({ where: { customerId: userId } }),
+    prisma.referralCredit.count({
+      where: { OR: [{ referrerId: userId }, { referredUserId: userId }] },
+    }),
   ]);
   if (stampCount > 0 || claimCount > 0 || grantRequestCount > 0) {
     return {
       ok: false,
       error:
         "Pelanggan ini sudah punya riwayat stempel/klaim/ajuan stempel awal — tidak bisa dihapus permanen agar riwayat tetap utuh.",
+    };
+  }
+  if (referralCreditCount > 0) {
+    return {
+      ok: false,
+      error:
+        "Pelanggan ini punya riwayat referral (mengajak teman atau diajak teman) — tidak bisa dihapus permanen agar riwayat tetap utuh.",
     };
   }
 
