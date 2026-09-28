@@ -40,7 +40,7 @@ export default async function HistoryPage() {
               Belum ada kunjungan.
             </Card>
           ) : (
-            <Card className="divide-y divide-border p-0">
+            <Card className="divide-y divide-border gap-0 p-0">
               {visits.map((visit) => (
                 <div
                   key={visit.id}
@@ -64,7 +64,7 @@ export default async function HistoryPage() {
               Belum ada reward yang diklaim.
             </Card>
           ) : (
-            <Card className="divide-y divide-border p-0">
+            <Card className="divide-y divide-border gap-0 p-0">
               {claims.map((claim) => (
                 <div key={claim.id} className="px-4 py-3 text-sm">
                   <p className="font-medium text-foreground">
@@ -87,7 +87,7 @@ export default async function HistoryPage() {
               Belum ada diskon referral. Ajak teman lewat kode referral kamu di halaman Kartu Saya.
             </Card>
           ) : (
-            <Card className="divide-y divide-border p-0">
+            <Card className="divide-y divide-border gap-0 p-0">
               {referralCredits.map((credit) => (
                 <div
                   key={credit.id}

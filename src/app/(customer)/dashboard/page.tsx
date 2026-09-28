@@ -57,7 +57,7 @@ export default async function CustomerDashboardPage() {
             Belum ada kunjungan. Tunjukkan QR Anda ke barista saat checkout.
           </Card>
         ) : (
-          <Card className="divide-y divide-border p-0">
+          <Card className="divide-y divide-border gap-0 p-0">
             {recentStamps.map((stamp) => (
               <div
                 key={stamp.id}

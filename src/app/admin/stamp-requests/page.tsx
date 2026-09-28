@@ -28,7 +28,7 @@ export default async function StampRequestsPage() {
             Tidak ada ajuan yang menunggu.
           </Card>
         ) : (
-          <Card className="divide-y divide-border p-0">
+          <Card className="divide-y divide-border gap-0 p-0">
             {pending.map((r) => (
               <div
                 key={r.id}
@@ -77,7 +77,7 @@ export default async function StampRequestsPage() {
             Belum ada ajuan yang diproses.
           </Card>
         ) : (
-          <Card className="divide-y divide-border p-0">
+          <Card className="divide-y divide-border gap-0 p-0">
             {reviewed.map((r) => (
               <div
                 key={r.id}

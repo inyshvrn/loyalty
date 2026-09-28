@@ -113,7 +113,7 @@ export function AdminAkunView({ name, email }: { name: string; email: string }) 
         <p className="text-sm text-muted-foreground">{email}</p>
       </div>
 
-      <Card className="mb-6 divide-y divide-border p-0">
+      <Card className="mb-6 divide-y divide-border gap-0 p-0">
         <button
           type="button"
           className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm hover:bg-secondary"

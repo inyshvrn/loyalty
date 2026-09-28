@@ -113,7 +113,7 @@ export default async function AdminCustomerDetailPage(
               Belum ada kunjungan.
             </Card>
           ) : (
-            <Card className="divide-y divide-border p-0">
+            <Card className="divide-y divide-border gap-0 p-0">
               {stamps.map((s) => (
                 <div
                   key={s.id}
@@ -143,7 +143,7 @@ export default async function AdminCustomerDetailPage(
               Belum ada reward yang diklaim.
             </Card>
           ) : (
-            <Card className="divide-y divide-border p-0">
+            <Card className="divide-y divide-border gap-0 p-0">
               {claims.map((c) => (
                 <div
                   key={c.id}
@@ -178,7 +178,7 @@ export default async function AdminCustomerDetailPage(
               Belum ada teman yang memakai kode referral pelanggan ini.
             </Card>
           ) : (
-            <Card className="divide-y divide-border p-0">
+            <Card className="divide-y divide-border gap-0 p-0">
               {referralCredits.map((credit) => (
                 <div
                   key={credit.id}

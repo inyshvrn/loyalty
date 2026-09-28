@@ -116,7 +116,7 @@ export function AkunView({
         Bulan ini: {stats.stampsThisMonth} stempel &middot; {stats.claimsThisMonth} reward
       </p>
 
-      <Card className="mb-6 divide-y divide-border p-0">
+      <Card className="mb-6 divide-y divide-border gap-0 p-0">
         <Link
           href="/scan/pilih-outlet"
           className="flex items-center gap-3 px-4 py-3.5 text-sm hover:bg-secondary"
