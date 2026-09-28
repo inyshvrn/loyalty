@@ -11,6 +11,7 @@ import {
   Camera,
   Search,
   CircleUserRound,
+  ShieldCheck,
 } from "lucide-react";
 
 export type NavItem = {
@@ -39,5 +40,6 @@ export const adminNav: NavItem[] = [
   { href: "/admin/baristas", label: "Barista", icon: User },
   { href: "/admin/outlets", label: "Outlet", icon: Store },
   { href: "/admin/stamp-requests", label: "Persetujuan", icon: ClipboardCheck },
+  { href: "/admin/admins", label: "Admin", icon: ShieldCheck },
   { href: "/admin/settings", label: "Pengaturan", icon: Settings },
 ];

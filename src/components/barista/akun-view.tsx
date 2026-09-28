@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, LogOut, Pencil, KeyRound, Store, ChevronRight } from "lucide-react";
+import { ArrowLeft, LogOut, UserRound, Lock, Store, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -137,7 +137,7 @@ export function AkunView({
             setNameDialogOpen(true);
           }}
         >
-          <Pencil className="size-4 text-muted-foreground" />
+          <UserRound className="size-4 text-muted-foreground" />
           <span className="flex-1 font-medium text-foreground">Ubah Nama</span>
           <ChevronRight className="size-4 text-muted-foreground" />
         </button>
@@ -151,7 +151,7 @@ export function AkunView({
             setPasswordDialogOpen(true);
           }}
         >
-          <KeyRound className="size-4 text-muted-foreground" />
+          <Lock className="size-4 text-muted-foreground" />
           <span className="flex-1 font-medium text-foreground">Ubah Kata Sandi</span>
           <ChevronRight className="size-4 text-muted-foreground" />
         </button>

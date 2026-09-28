@@ -291,6 +291,151 @@ export async function deleteBaristaAction(userId: string): Promise<CorrectionRes
   return { ok: true };
 }
 
+// ---- Admin account management (other admins — see updateOwnAdminNameAction
+// etc. above for the current admin's own account) ----
+
+const createAdminSchema = z.object({
+  name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
+  email: z.string().trim().toLowerCase().email("Format email tidak valid"),
+  password: z.string().min(8, "Kata sandi minimal 8 karakter"),
+});
+
+export async function createAdminAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const parsed = createAdminSchema.safeParse({
+    name: formData.get("name"),
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
+  }
+
+  const existing = await prisma.user.findUnique({
+    where: { email: parsed.data.email },
+  });
+  if (existing) {
+    return { error: "Email ini sudah terdaftar." };
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  await prisma.user.create({
+    data: {
+      name: parsed.data.name,
+      email: parsed.data.email,
+      passwordHash,
+      role: "ADMIN",
+      emailVerified: true, // staff accounts skip self-verification
+    },
+  });
+
+  revalidatePath("/admin/admins");
+  return { success: `Akun admin ${parsed.data.name} dibuat.` };
+}
+
+/** Deliberately no "can't deactivate the last admin" guard needed here —
+ * this list (see /admin/admins) always excludes the admin currently acting,
+ * so they can never lock themselves (or everyone) out through it. The only
+ * way to lose all admin access would be self-deactivation, which isn't
+ * offered anywhere (the Akun page has no such option). */
+export async function setAdminActiveAction(userId: string, isActive: boolean) {
+  await requireAdmin();
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || user.role !== "ADMIN") {
+    throw new Error("Akun admin tidak ditemukan.");
+  }
+
+  await prisma.user.update({ where: { id: userId }, data: { isActive } });
+  revalidatePath("/admin/admins");
+}
+
+export async function resetAdminLockoutAction(userId: string) {
+  await requireAdmin();
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || user.role !== "ADMIN") {
+    throw new Error("Akun admin tidak ditemukan.");
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { failedLoginAttempts: 0, lockedUntil: null },
+  });
+  revalidatePath("/admin/admins");
+}
+
+const updateAdminSchema = z.object({
+  userId: z.string().min(1),
+  name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
+  email: z.string().trim().toLowerCase().email("Format email tidak valid"),
+  password: z.union([z.literal(""), z.string().min(8, "Kata sandi minimal 8 karakter")]),
+});
+
+export async function updateAdminAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const parsed = updateAdminSchema.safeParse({
+    userId: formData.get("userId"),
+    name: formData.get("name"),
+    email: formData.get("email"),
+    password: formData.get("password") ?? "",
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
+  }
+  const { userId, name, email, password } = parsed.data;
+
+  const target = await prisma.user.findUnique({ where: { id: userId } });
+  if (!target || target.role !== "ADMIN") {
+    return { error: "Akun admin tidak ditemukan." };
+  }
+
+  const emailTaken = await prisma.user.findFirst({
+    where: { email, NOT: { id: userId } },
+  });
+  if (emailTaken) {
+    return { error: "Email ini sudah dipakai akun lain." };
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      name,
+      email,
+      ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}),
+    },
+  });
+
+  revalidatePath("/admin/admins");
+  return { success: `Akun admin ${name} diperbarui.` };
+}
+
+/** No "last admin" guard needed for the same reason as setAdminActiveAction
+ * above — this list never includes the admin doing the deleting. Admin-
+ * authored history (reviewed grants, cancelled claims/credits) uses ON
+ * DELETE SET NULL, so deleting one doesn't get blocked by it — it just
+ * loses the "who did this" attribution on those old records. */
+export async function deleteAdminAction(userId: string): Promise<CorrectionResult> {
+  await requireAdmin();
+
+  const target = await prisma.user.findUnique({ where: { id: userId } });
+  if (!target || target.role !== "ADMIN") {
+    return { ok: false, error: "Akun admin tidak ditemukan." };
+  }
+
+  await prisma.user.delete({ where: { id: userId } });
+  revalidatePath("/admin/admins");
+  return { ok: true };
+}
+
 // ---- Outlet management ----
 
 const outletNameSchema = z.string().trim().min(2, "Nama outlet minimal 2 karakter").max(100);
