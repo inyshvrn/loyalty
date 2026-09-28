@@ -4,7 +4,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { auth, unstable_update } from "@/lib/auth";
 import { getStoreDayBounds, formatStoreTime } from "@/lib/store-time";
 import {
   getStampThreshold,
@@ -24,6 +24,119 @@ async function requireAdmin() {
 }
 
 export type ActionState = { error?: string; success?: string } | null;
+
+// ---- Admin's own account (self-service, from the Akun page) ----
+
+const adminNameSchema = z.string().trim().min(2, "Nama minimal 2 karakter").max(100);
+
+export type UpdateOwnNameResult = { ok: true } | { ok: false; error: string };
+
+/** Self-service — admin renaming themselves. Pushes the new name into the
+ * session via unstable_update so it shows up right away, without needing
+ * to log out and back in. Same pattern as a barista's own name change. */
+export async function updateOwnAdminNameAction(name: string): Promise<UpdateOwnNameResult> {
+  const admin = await requireAdmin();
+
+  const parsed = adminNameSchema.safeParse(name);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Nama tidak valid." };
+  }
+
+  await prisma.user.update({ where: { id: admin.id }, data: { name: parsed.data } });
+  await unstable_update({ user: { name: parsed.data } });
+
+  return { ok: true };
+}
+
+const adminEmailSchema = z.object({
+  currentPassword: z.string().min(1, "Masukkan kata sandi untuk konfirmasi."),
+  newEmail: z.string().trim().toLowerCase().email("Format email tidak valid"),
+});
+
+export type UpdateOwnEmailResult = { ok: true } | { ok: false; error: string };
+
+/** Self-service — admin changing their own login email. Requires the
+ * current password, same safety bar as a password change: the email
+ * doubles as the login identifier, so letting it change without proving
+ * you already have access would let a briefly-unlocked device be hijacked
+ * into a full account takeover. */
+export async function updateOwnAdminEmailAction(
+  currentPassword: string,
+  newEmail: string
+): Promise<UpdateOwnEmailResult> {
+  const admin = await requireAdmin();
+
+  const parsed = adminEmailSchema.safeParse({ currentPassword, newEmail });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: admin.id },
+    select: { passwordHash: true },
+  });
+  if (!user) {
+    return { ok: false, error: "Akun tidak ditemukan." };
+  }
+
+  const matches = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
+  if (!matches) {
+    return { ok: false, error: "Kata sandi salah." };
+  }
+
+  const emailTaken = await prisma.user.findFirst({
+    where: { email: parsed.data.newEmail, NOT: { id: admin.id } },
+  });
+  if (emailTaken) {
+    return { ok: false, error: "Email ini sudah dipakai akun lain." };
+  }
+
+  await prisma.user.update({ where: { id: admin.id }, data: { email: parsed.data.newEmail } });
+  await unstable_update({ user: { email: parsed.data.newEmail } });
+
+  return { ok: true };
+}
+
+const adminChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Masukkan kata sandi lama."),
+  newPassword: z.string().min(8, "Kata sandi baru minimal 8 karakter"),
+});
+
+export type UpdateOwnPasswordResult = { ok: true } | { ok: false; error: string };
+
+/** Self-service — admin setting their own password, without needing to go
+ * through the email-based "Lupa kata sandi?" flow. Requires the current
+ * password first, so a device left unlocked/logged-in for a moment can't
+ * be hijacked by setting a new password without ever knowing the old one. */
+export async function updateOwnAdminPasswordAction(
+  currentPassword: string,
+  newPassword: string
+): Promise<UpdateOwnPasswordResult> {
+  const admin = await requireAdmin();
+
+  const parsed = adminChangePasswordSchema.safeParse({ currentPassword, newPassword });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: admin.id },
+    select: { passwordHash: true },
+  });
+  if (!user) {
+    return { ok: false, error: "Akun tidak ditemukan." };
+  }
+
+  const matches = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
+  if (!matches) {
+    return { ok: false, error: "Kata sandi lama salah." };
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
+  await prisma.user.update({ where: { id: admin.id }, data: { passwordHash } });
+
+  return { ok: true };
+}
 
 // ---- Barista account management ----
 

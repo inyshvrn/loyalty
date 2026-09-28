@@ -60,6 +60,9 @@ export const authConfig: NextAuthConfig = {
         if (session?.user?.name) {
           token.name = session.user.name;
         }
+        if (session?.user?.email) {
+          token.email = session.user.email;
+        }
       }
       return token;
     },

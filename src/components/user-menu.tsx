@@ -55,22 +55,22 @@ export function UserMenu({
   name,
   email,
   variant = "avatar",
-  /** Barista-only — passing this at all (even undefined-ish falsy states
-   * are still "passed") points the whole trigger straight at /scan/akun
-   * instead of opening a dropdown. That page holds everything that used to
-   * live in this menu for baristas (stats, outlet switch, name/password
-   * edit, logout) — cramming all of that into a small menu got tight, and
-   * a barista's account is worth more room than a customer's/admin's. */
-  isBarista = false,
+  /** Staff roles (barista, admin) get a dedicated account page instead of
+   * this dropdown — passing its href points the whole trigger straight
+   * there. That page holds everything that used to live in this menu for
+   * them (name/password edit, logout, and role-specific extras like a
+   * barista's stats/outlet) — cramming all of that into a small menu got
+   * tight, and a staff account is worth more room than a customer's. */
+  accountPageHref,
 }: {
   name: string;
   email: string;
   variant?: "avatar" | "nav";
-  isBarista?: boolean;
+  accountPageHref?: string;
 }) {
-  if (isBarista) {
+  if (accountPageHref) {
     return (
-      <Link href="/scan/akun" className={cn("outline-none", triggerClass[variant])}>
+      <Link href={accountPageHref} className={cn("outline-none", triggerClass[variant])}>
         <TriggerContent variant={variant} name={name} />
       </Link>
     );

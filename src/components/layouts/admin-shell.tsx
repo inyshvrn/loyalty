@@ -69,12 +69,12 @@ export function AdminShell({
 
   return (
     <div className="flex h-svh overflow-hidden bg-background">
-      <SidebarNav items={items} subtitle="Admin" user={user} />
+      <SidebarNav items={items} subtitle="Admin" user={user} accountPageHref="/admin/akun" />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 md:hidden">
           <BrandMark />
           <div className="flex items-center gap-2">
-            <UserMenu name={user.name} email={user.email} />
+            <UserMenu name={user.name} email={user.email} accountPageHref="/admin/akun" />
             <Sheet>
               <SheetTrigger render={<Button variant="ghost" size="icon" />}>
                 <Menu className="size-5" />

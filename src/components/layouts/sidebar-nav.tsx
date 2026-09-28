@@ -12,10 +12,12 @@ export function SidebarNav({
   items,
   subtitle,
   user,
+  accountPageHref,
 }: {
   items: NavItem[];
   subtitle: string;
   user?: { name: string; email: string };
+  accountPageHref?: string;
 }) {
   const pathname = usePathname();
 
@@ -56,7 +58,7 @@ export function SidebarNav({
       </nav>
       {user && (
         <div className="relative z-10 mt-auto border-t border-border px-2 pt-3">
-          <UserMenu name={user.name} email={user.email} />
+          <UserMenu name={user.name} email={user.email} accountPageHref={accountPageHref} />
         </div>
       )}
     </aside>

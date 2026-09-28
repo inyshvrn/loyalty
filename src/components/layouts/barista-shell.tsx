@@ -29,7 +29,7 @@ export function BaristaShell({
           <Badge variant="secondary" className="font-semibold">
             Barista
           </Badge>
-          <UserMenu name={user.name} email={user.email} isBarista />
+          <UserMenu name={user.name} email={user.email} accountPageHref="/scan/akun" />
         </div>
       </header>
       <main className={cn("flex flex-1 flex-col", showBottomNav && "pb-20 md:pb-0")}>
