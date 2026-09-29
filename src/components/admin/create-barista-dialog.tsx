@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -33,7 +32,6 @@ export function CreateBaristaDialog({
 }: {
   outlets: { id: string; name: string }[];
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -51,7 +49,6 @@ export function CreateBaristaDialog({
         return;
       }
       setOpen(false);
-      router.refresh();
     } finally {
       setPending(false);
     }

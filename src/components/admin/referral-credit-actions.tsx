@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +27,6 @@ export function ReferralCreditActions({
   creditId: string;
   status: ReferralCreditStatus;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -48,7 +46,6 @@ export function ReferralCreditActions({
       }
       toast.success(isRedeemed ? "Pemakaian dibatalkan." : "Kredit dibatalkan permanen.");
       setOpen(false);
-      router.refresh();
     } catch {
       toast.error("Terjadi kesalahan. Coba lagi.");
     } finally {

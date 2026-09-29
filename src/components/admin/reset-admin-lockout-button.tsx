@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { LockKeyholeOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { resetAdminLockoutAction } from "@/lib/actions/admin";
 
 export function ResetAdminLockoutButton({ userId }: { userId: string }) {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
 
   async function handleClick() {
@@ -16,7 +14,6 @@ export function ResetAdminLockoutButton({ userId }: { userId: string }) {
     try {
       await resetAdminLockoutAction(userId);
       toast.success("Kunci login dibuka. Admin bisa coba masuk lagi.");
-      router.refresh();
     } catch {
       toast.error("Terjadi kesalahan. Coba lagi.");
     } finally {

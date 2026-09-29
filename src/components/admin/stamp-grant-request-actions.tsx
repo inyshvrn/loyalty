@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,6 @@ export function StampGrantRequestActions({
   customerName: string;
   count: number;
 }) {
-  const router = useRouter();
   const [pending, setPending] = useState<"approve" | "cancel" | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
 
@@ -43,7 +41,6 @@ export function StampGrantRequestActions({
         return;
       }
       toast.success(`Ajuan ${count} stempel untuk ${customerName} dikonfirmasi.`);
-      router.refresh();
     } catch {
       toast.error("Terjadi kesalahan. Coba lagi.");
     } finally {
@@ -61,7 +58,6 @@ export function StampGrantRequestActions({
       }
       toast.success("Ajuan dibatalkan, stempel dihapus.");
       setCancelOpen(false);
-      router.refresh();
     } catch {
       toast.error("Terjadi kesalahan. Coba lagi.");
     } finally {

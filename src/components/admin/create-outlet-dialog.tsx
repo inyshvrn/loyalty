@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -18,7 +17,6 @@ import { FormMessage } from "@/components/auth/form-message";
 import { createOutletAction } from "@/lib/actions/admin";
 
 export function CreateOutletDialog() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -35,7 +33,6 @@ export function CreateOutletDialog() {
         return;
       }
       setOpen(false);
-      router.refresh();
     } finally {
       setPending(false);
     }

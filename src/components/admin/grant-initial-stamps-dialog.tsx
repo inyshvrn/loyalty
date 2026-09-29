@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,6 @@ import { FormMessage } from "@/components/auth/form-message";
 import { adminGrantInitialStampsAction } from "@/lib/actions/admin";
 
 export function GrantInitialStampsDialog({ customerId }: { customerId: string }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -42,7 +40,6 @@ export function GrantInitialStampsDialog({ customerId }: { customerId: string })
       }
       toast.success("Stempel awal diberikan.");
       setOpen(false);
-      router.refresh();
     } finally {
       setPending(false);
     }

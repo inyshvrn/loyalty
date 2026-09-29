@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +17,6 @@ import {
 import { cancelClaimAction } from "@/lib/actions/admin";
 
 export function CancelClaimButton({ claimId }: { claimId: string }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -32,7 +30,6 @@ export function CancelClaimButton({ claimId }: { claimId: string }) {
       }
       toast.success("Klaim dibatalkan.");
       setOpen(false);
-      router.refresh();
     } catch {
       toast.error("Terjadi kesalahan. Coba lagi.");
     } finally {

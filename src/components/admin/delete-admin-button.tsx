@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +24,6 @@ export function DeleteAdminButton({
   userId: string;
   name: string;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -39,7 +37,6 @@ export function DeleteAdminButton({
       }
       toast.success(`Akun ${name} dihapus.`);
       setOpen(false);
-      router.refresh();
     } catch {
       toast.error("Terjadi kesalahan. Coba lagi.");
     } finally {

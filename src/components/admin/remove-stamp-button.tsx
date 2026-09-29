@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,6 @@ import {
 import { removeStampAction } from "@/lib/actions/admin";
 
 export function RemoveStampButton({ stampId }: { stampId: string }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -33,7 +31,6 @@ export function RemoveStampButton({ stampId }: { stampId: string }) {
       }
       toast.success("Stempel dihapus.");
       setOpen(false);
-      router.refresh();
     } catch {
       toast.error("Terjadi kesalahan. Coba lagi.");
     } finally {

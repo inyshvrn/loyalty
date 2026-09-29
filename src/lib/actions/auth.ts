@@ -85,7 +85,7 @@ export async function registerAction(
         referrerId = referrer.id;
       }
 
-      const passwordHash = await bcrypt.hash(password, 12);
+      const passwordHash = await bcrypt.hash(password, 10);
       const user = await prisma.user.create({
         data: {
           name,
@@ -289,7 +289,7 @@ export async function resetPasswordAction(
     };
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await bcrypt.hash(password, 10);
   await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
 
   redirect("/login?reset=success");

@@ -101,7 +101,7 @@ export async function updateOwnPasswordAction(
     return { ok: false, error: "Kata sandi lama salah." };
   }
 
-  const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
+  const passwordHash = await bcrypt.hash(parsed.data.newPassword, 10);
   await prisma.user.update({ where: { id: barista.id }, data: { passwordHash } });
 
   return { ok: true };

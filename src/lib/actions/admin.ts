@@ -132,7 +132,7 @@ export async function updateOwnAdminPasswordAction(
     return { ok: false, error: "Kata sandi lama salah." };
   }
 
-  const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
+  const passwordHash = await bcrypt.hash(parsed.data.newPassword, 10);
   await prisma.user.update({ where: { id: admin.id }, data: { passwordHash } });
 
   return { ok: true };
@@ -170,7 +170,7 @@ export async function createBaristaAction(
     return { error: "Email ini sudah terdaftar." };
   }
 
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  const passwordHash = await bcrypt.hash(parsed.data.password, 10);
   await prisma.user.create({
     data: {
       name: parsed.data.name,
@@ -257,7 +257,7 @@ export async function updateBaristaAction(
       name,
       email,
       outletId: outletId || null,
-      ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}),
+      ...(password ? { passwordHash: await bcrypt.hash(password, 10) } : {}),
     },
   });
 
@@ -322,7 +322,7 @@ export async function createAdminAction(
     return { error: "Email ini sudah terdaftar." };
   }
 
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  const passwordHash = await bcrypt.hash(parsed.data.password, 10);
   await prisma.user.create({
     data: {
       name: parsed.data.name,
@@ -410,7 +410,7 @@ export async function updateAdminAction(
     data: {
       name,
       email,
-      ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}),
+      ...(password ? { passwordHash: await bcrypt.hash(password, 10) } : {}),
     },
   });
 
@@ -620,7 +620,7 @@ export async function migrateCustomerAction(
   // No password set here — nobody but the customer should know it. They
   // claim the account later via "Lupa kata sandi?" (same flow as any other
   // password reset), which sets a real password only they know.
-  const passwordHash = await bcrypt.hash(crypto.randomUUID() + crypto.randomUUID(), 12);
+  const passwordHash = await bcrypt.hash(crypto.randomUUID() + crypto.randomUUID(), 10);
   const customer = await prisma.user.create({
     data: {
       name,

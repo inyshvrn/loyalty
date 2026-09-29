@@ -39,6 +39,10 @@ export function DeleteCustomerButton({
       }
       toast.success(`Akun ${name} dihapus.`);
       setOpen(false);
+      // Navigating to a route the client already cached from the earlier
+      // list view (before this mutation) — revalidatePath only re-renders
+      // the CURRENT route in the action's response, so without this the
+      // push below could still serve the client's stale cached list.
       router.push("/admin/customers");
       router.refresh();
     } catch {
