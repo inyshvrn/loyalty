@@ -5,7 +5,10 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { LoyaltyCard } from "@/components/loyalty-card";
 import { ReferralCard } from "@/components/referral-card";
+import { BirthdayPromptDialog } from "@/components/birthday-prompt-dialog";
+import { BirthdayDateCard } from "@/components/birthday-date-card";
 import { Card } from "@/components/ui/card";
+import { prisma } from "@/lib/prisma";
 import { getCustomerProgress, getRecentStamps } from "@/lib/loyalty";
 import { getReferralStats } from "@/lib/referral";
 import { formatRelativeIndonesian } from "@/lib/format";
@@ -15,11 +18,17 @@ export default async function CustomerDashboardPage() {
   if (!session?.user) redirect("/login");
 
   const customerId = session.user.id;
-  const [progress, recentStamps, referralStats] = await Promise.all([
+  const [progress, recentStamps, referralStats, birthdayPromptInfo] = await Promise.all([
     getCustomerProgress(customerId),
     getRecentStamps(customerId, 3),
     getReferralStats(customerId),
+    prisma.user.findUnique({
+      where: { id: customerId },
+      select: { dateOfBirth: true, birthdayPromptDismissedAt: true },
+    }),
   ]);
+  const showBirthdayPrompt =
+    !birthdayPromptInfo?.dateOfBirth && !birthdayPromptInfo?.birthdayPromptDismissedAt;
 
   let qrDataUrl: string | null = null;
   try {
@@ -31,6 +40,8 @@ export default async function CustomerDashboardPage() {
   return (
     <div className="mx-auto max-w-md px-4 py-6 md:max-w-lg md:px-8 md:py-10">
       <h1 className="mb-4 text-xl font-bold text-foreground">Kartu Saya</h1>
+
+      {showBirthdayPrompt && <BirthdayPromptDialog />}
 
       <LoyaltyCard
         customerName={session.user.name ?? ""}
@@ -80,6 +91,8 @@ export default async function CustomerDashboardPage() {
         referralCount={referralStats.referralCount}
         availableCredits={referralStats.availableCredits}
       />
+
+      <BirthdayDateCard dateOfBirth={birthdayPromptInfo?.dateOfBirth ?? null} />
     </div>
   );
 }

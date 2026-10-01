@@ -13,7 +13,7 @@ import {
   createGrantedStamps,
 } from "@/lib/loyalty";
 import { createUniqueReferralCode } from "@/lib/referral";
-import { phoneSchema } from "@/lib/validators";
+import { phoneSchema, dateOnlySchema } from "@/lib/validators";
 
 async function requireAdmin() {
   const session = await auth();
@@ -641,7 +641,7 @@ const migrateCustomerSchema = z
     email: z.string().trim().toLowerCase().email("Format email tidak valid"),
     phone: phoneSchema,
     initialStamps: z.coerce.number().int().min(0, "Tidak boleh negatif").max(999),
-    dateOfBirth: z.union([z.literal(""), z.coerce.date()]).optional(),
+    dateOfBirth: z.union([z.literal(""), dateOnlySchema]).optional(),
   })
   .refine((data) => !(data.dateOfBirth instanceof Date) || data.dateOfBirth <= new Date(), {
     message: "Tanggal lahir tidak boleh di masa depan.",
@@ -713,7 +713,7 @@ const updateCustomerSchema = z
     name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
     email: z.string().trim().toLowerCase().email("Format email tidak valid"),
     phone: z.union([z.literal(""), phoneSchema]),
-    dateOfBirth: z.union([z.literal(""), z.coerce.date()]).optional(),
+    dateOfBirth: z.union([z.literal(""), dateOnlySchema]).optional(),
   })
   .refine((data) => !(data.dateOfBirth instanceof Date) || data.dateOfBirth <= new Date(), {
     message: "Tanggal lahir tidak boleh di masa depan.",

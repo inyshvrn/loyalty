@@ -16,7 +16,7 @@ import {
 } from "@/lib/password-reset-token";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/email";
 import { roleHome } from "@/lib/role-home";
-import { phoneSchema } from "@/lib/validators";
+import { phoneSchema, dateOnlySchema } from "@/lib/validators";
 import { createUniqueReferralCode } from "@/lib/referral";
 
 const baseUrl = process.env.AUTH_URL ?? "http://localhost:3000";
@@ -38,7 +38,7 @@ const registerSchema = z
     phone: phoneSchema,
     password: z.string().min(8, "Kata sandi minimal 8 karakter"),
     referralCode: z.union([z.literal(""), z.string().trim().max(20)]).optional(),
-    dateOfBirth: z.union([z.literal(""), z.coerce.date()]).optional(),
+    dateOfBirth: z.union([z.literal(""), dateOnlySchema]).optional(),
   })
   .refine((data) => !(data.dateOfBirth instanceof Date) || data.dateOfBirth <= new Date(), {
     message: "Tanggal lahir tidak boleh di masa depan.",

@@ -80,12 +80,17 @@ model User {
   referralCreditsRedeemed  ReferralCredit[] @relation("BaristaRedeemedCredits")
   referralCreditsCancelled ReferralCredit[] @relation("AdminCancelledReferralCredits")
 
-  /// Optional — only ever set for role CUSTOMER. Settable at registration
-  /// or later by an admin (no customer self-service profile editing exists
-  /// in this app). @db.Date because only the calendar date matters, never
-  /// a time of day; see BirthdayRewardCredit for how it's matched against
-  /// "today."
-  dateOfBirth DateTime? @db.Date
+  /// Optional — only ever set for role CUSTOMER. Settable at registration,
+  /// later by the customer themselves (the one piece of their own profile
+  /// they can self-edit — see updateOwnDateOfBirthAction), or by an admin.
+  /// @db.Date because only the calendar date matters, never a time of day;
+  /// see BirthdayRewardCredit for how it's matched against "today."
+  dateOfBirth               DateTime? @db.Date
+  /// Set only by the customer explicitly dismissing the "fill in your
+  /// birthday" nudge on the dashboard with "Jangan Tampilkan Lagi" — a
+  /// temporary "remind me later" snooze is tracked client-side instead
+  /// (localStorage), so this stays null for that case.
+  birthdayPromptDismissedAt DateTime?
 
   birthdayRewardCreditsEarned    BirthdayRewardCredit[] @relation("BirthdayRewardCustomer")
   birthdayRewardCreditsRedeemed  BirthdayRewardCredit[] @relation("BaristaRedeemedBirthdayCredits")
