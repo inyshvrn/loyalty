@@ -17,6 +17,19 @@ export function getStoreDayBounds(reference: Date = new Date()) {
   return { start, end };
 }
 
+/** "Today" in the store's timezone as plain calendar numbers — e.g. for
+ * matching a customer's date of birth against the current date without
+ * comparing full timestamps. Same offset-shift-then-read-UTC-getters
+ * technique as getStoreDayBounds above. */
+export function getStoreToday(reference: Date = new Date()) {
+  const shifted = new Date(reference.getTime() + STORE_UTC_OFFSET_MINUTES * 60_000);
+  return {
+    year: shifted.getUTCFullYear(),
+    month: shifted.getUTCMonth() + 1,
+    day: shifted.getUTCDate(),
+  };
+}
+
 export function formatStoreTime(date: Date): string {
   return date.toLocaleTimeString("id-ID", {
     hour: "2-digit",

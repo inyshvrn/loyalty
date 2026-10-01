@@ -11,9 +11,10 @@ import {
   getStampCountSince,
   createGrantedStamps,
 } from "@/lib/loyalty";
-import { getStoreDayBounds, formatStoreTime } from "@/lib/store-time";
+import { getStoreDayBounds, formatStoreTime, getStoreToday } from "@/lib/store-time";
+import { getBirthdayRewardSetting, isBirthdayToday } from "@/lib/birthday-reward";
 import { sortByNameInsensitive } from "@/lib/utils";
-import type { User } from "@/generated/prisma/client";
+import { Prisma, type User } from "@/generated/prisma/client";
 
 async function requireBarista() {
   const session = await auth();
@@ -123,10 +124,17 @@ export type CustomerStatus = {
   /** Number of AVAILABLE referral credits this customer (as a referrer) can
    * redeem right now — see redeemReferralCreditAction below. */
   availableReferralCredits: number;
+  /** True if a birthday reward can be redeemed right now — either an
+   * AVAILABLE credit already exists (e.g. from an admin correction), or
+   * today is this customer's exact birthday and they qualify for a fresh
+   * one. Never more than one per year, so unlike referral this is a
+   * boolean, not a count. See redeemBirthdayRewardAction below. */
+  birthdayRewardAvailable: boolean;
 };
 
 async function buildCustomerStatus(customer: User): Promise<CustomerStatus> {
-  const [threshold, lastClaimAt, everStampCount, pendingGrant, availableReferralCredits] =
+  const today = getStoreToday();
+  const [threshold, lastClaimAt, everStampCount, pendingGrant, availableReferralCredits, birthdaySetting, birthdayCredits] =
     await Promise.all([
       getStampThreshold(),
       getProgressCutoff(customer.id),
@@ -138,8 +146,24 @@ async function buildCustomerStatus(customer: User): Promise<CustomerStatus> {
       prisma.referralCredit.count({
         where: { referrerId: customer.id, status: "AVAILABLE" },
       }),
+      getBirthdayRewardSetting(),
+      prisma.birthdayRewardCredit.findMany({
+        where: { customerId: customer.id, OR: [{ status: "AVAILABLE" }, { year: today.year }] },
+        select: { status: true, year: true },
+      }),
     ]);
   const stamps = await getStampCountSince(customer.id, lastClaimAt);
+
+  const hasAvailableBirthdayCredit = birthdayCredits.some((c) => c.status === "AVAILABLE");
+  const hasBirthdayCreditThisYear = birthdayCredits.some((c) => c.year === today.year);
+  const freshlyEligibleForBirthdayReward =
+    !hasBirthdayCreditThisYear &&
+    birthdaySetting.enabled &&
+    customer.emailVerified &&
+    !!customer.dateOfBirth &&
+    isBirthdayToday(customer.dateOfBirth, today) &&
+    everStampCount >= birthdaySetting.minStamps;
+
   return {
     id: customer.id,
     name: customer.name,
@@ -152,6 +176,7 @@ async function buildCustomerStatus(customer: User): Promise<CustomerStatus> {
     eligibleForInitialGrant: everStampCount === 0 && !pendingGrant,
     pendingGrantRequest: pendingGrant,
     availableReferralCredits,
+    birthdayRewardAvailable: hasAvailableBirthdayCredit || freshlyEligibleForBirthdayReward,
   };
 }
 
@@ -409,6 +434,144 @@ export async function redeemReferralCreditAction(
       outletId: scanningBarista?.outletId ?? null,
     },
   });
+
+  const data = await buildCustomerStatus(customer);
+  return { ok: true, data };
+}
+
+// ---- Birthday reward ----
+
+export type BirthdayRewardPreview = {
+  discountType: "PERCENT" | "FIXED";
+  discountValue: number;
+} | null;
+
+/** Fetched on demand when a barista opens the redeem dialog, same reason as
+ * getOldestAvailableCredit above. Unlike referral, there's usually no row
+ * to read yet — a birthday reward is normally created and redeemed in the
+ * same action, so this previews the amount that *will* get snapshotted:
+ * reads an existing AVAILABLE row if one happens to exist (e.g. from an
+ * admin correction), otherwise previews the current setting. */
+export async function getBirthdayRewardPreview(customerId: string): Promise<BirthdayRewardPreview> {
+  await requireBarista();
+
+  const existing = await prisma.birthdayRewardCredit.findFirst({
+    where: { customerId, status: "AVAILABLE" },
+    orderBy: { createdAt: "asc" },
+    select: { discountType: true, discountValue: true },
+  });
+  if (existing) return existing;
+
+  const customer = await prisma.user.findUnique({ where: { id: customerId } });
+  const setting = await getBirthdayRewardSetting();
+  const today = getStoreToday();
+  const everStampCount = await prisma.stamp.count({ where: { customerId } });
+  const hasRowThisYear = await prisma.birthdayRewardCredit.findFirst({
+    where: { customerId, year: today.year },
+    select: { id: true },
+  });
+
+  const eligible =
+    !!customer &&
+    !hasRowThisYear &&
+    setting.enabled &&
+    customer.emailVerified &&
+    !!customer.dateOfBirth &&
+    isBirthdayToday(customer.dateOfBirth, today) &&
+    everStampCount >= setting.minStamps;
+
+  if (!eligible) return null;
+  return { discountType: setting.discountType, discountValue: setting.discountValue };
+}
+
+export type RedeemBirthdayRewardResult =
+  | { ok: true; data: CustomerStatus }
+  | { ok: false; error: string };
+
+/** Unlike redeemReferralCreditAction, there's usually nothing to "find" —
+ * a birthday reward normally gets created and redeemed in this one action,
+ * since the qualifying visit is both the earning and spending moment (see
+ * the BirthdayRewardCredit model doc comment in schema.prisma). Re-checks
+ * every condition server-side rather than trusting the badge the client
+ * saw a moment earlier. */
+export async function redeemBirthdayRewardAction(
+  customerId: string
+): Promise<RedeemBirthdayRewardResult> {
+  const barista = await requireBarista();
+
+  const customer = await prisma.user.findUnique({ where: { id: customerId } });
+  if (!customer || customer.role !== "CUSTOMER") {
+    return { ok: false, error: "Pelanggan tidak ditemukan." };
+  }
+  if (!customer.emailVerified) {
+    return { ok: false, error: "Pelanggan belum verifikasi email." };
+  }
+
+  const scanningBarista = await prisma.user.findUnique({
+    where: { id: barista.id },
+    select: { outletId: true },
+  });
+
+  const existing = await prisma.birthdayRewardCredit.findFirst({
+    where: { customerId, status: "AVAILABLE" },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (existing) {
+    await prisma.birthdayRewardCredit.update({
+      where: { id: existing.id },
+      data: {
+        status: "REDEEMED",
+        redeemedAt: new Date(),
+        redeemedByBaristaId: barista.id,
+        outletId: scanningBarista?.outletId ?? null,
+      },
+    });
+    const data = await buildCustomerStatus(customer);
+    return { ok: true, data };
+  }
+
+  const today = getStoreToday();
+  const setting = await getBirthdayRewardSetting();
+  const hasRowThisYear = await prisma.birthdayRewardCredit.findFirst({
+    where: { customerId, year: today.year },
+    select: { id: true },
+  });
+  const everStampCount = await prisma.stamp.count({ where: { customerId } });
+
+  const eligible =
+    !hasRowThisYear &&
+    setting.enabled &&
+    !!customer.dateOfBirth &&
+    isBirthdayToday(customer.dateOfBirth, today) &&
+    everStampCount >= setting.minStamps;
+
+  if (!eligible) {
+    return { ok: false, error: "Pelanggan ini tidak punya reward ulang tahun yang tersedia." };
+  }
+
+  try {
+    await prisma.birthdayRewardCredit.create({
+      data: {
+        customerId,
+        year: today.year,
+        discountType: setting.discountType,
+        discountValue: setting.discountValue,
+        status: "REDEEMED",
+        redeemedAt: new Date(),
+        redeemedByBaristaId: barista.id,
+        outletId: scanningBarista?.outletId ?? null,
+      },
+    });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return {
+        ok: false,
+        error: "Reward ulang tahun pelanggan ini baru saja dipakai di perangkat lain.",
+      };
+    }
+    throw err;
+  }
 
   const data = await buildCustomerStatus(customer);
   return { ok: true, data };

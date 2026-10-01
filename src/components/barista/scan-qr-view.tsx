@@ -18,7 +18,7 @@ export function ScanQrView() {
     setScanResult((prev) => (prev && prev.id === data.id ? data : prev));
   }
 
-  const { busyId, handleAddStamp, handleConfirmReward, handleRedeemCredit } =
+  const { busyId, handleAddStamp, handleConfirmReward, handleRedeemCredit, handleRedeemBirthdayReward } =
     useCustomerActions(updateScanResult);
 
   function resetScan() {
@@ -67,6 +67,7 @@ export function ScanQrView() {
               onConfirmReward={() => handleConfirmReward(scanResult.id)}
               onGrantRequested={updateScanResult}
               onRedeemCredit={() => handleRedeemCredit(scanResult.id)}
+              onRedeemBirthday={() => handleRedeemBirthdayReward(scanResult.id)}
             />
           )}
           {scanError && (

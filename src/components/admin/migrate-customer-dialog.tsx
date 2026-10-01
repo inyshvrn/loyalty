@@ -94,6 +94,10 @@ export function MigrateCustomerDialog() {
               required
             />
           </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="migrate-dob">Tanggal lahir (opsional)</Label>
+            <Input id="migrate-dob" name="dateOfBirth" type="date" />
+          </div>
           <DialogFooter>
             <Button type="submit" disabled={pending}>
               {pending ? "Menyimpan..." : "Daftarkan"}

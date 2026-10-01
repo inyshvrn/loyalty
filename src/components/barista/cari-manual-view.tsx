@@ -14,11 +14,10 @@ export function CariManualView({ initialResults }: { initialResults: CustomerSta
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(true);
 
-  const { busyId, handleAddStamp, handleConfirmReward, handleRedeemCredit } = useCustomerActions(
-    (data) => {
+  const { busyId, handleAddStamp, handleConfirmReward, handleRedeemCredit, handleRedeemBirthdayReward } =
+    useCustomerActions((data) => {
       setResults((prev) => prev.map((r) => (r.id === data.id ? data : r)));
-    }
-  );
+    });
 
   // A barista can start typing before the initial full-list request
   // resolves — without this guard, whichever response happens to come back
@@ -82,6 +81,7 @@ export function CariManualView({ initialResults }: { initialResults: CustomerSta
                 setResults((prev) => prev.map((r) => (r.id === data.id ? data : r)))
               }
               onRedeemCredit={() => handleRedeemCredit(result.id)}
+              onRedeemBirthday={() => handleRedeemBirthdayReward(result.id)}
             />
           ))}
       </div>

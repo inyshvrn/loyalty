@@ -22,11 +22,13 @@ export function EditCustomerDialog({
   name,
   email,
   phone,
+  dateOfBirth,
 }: {
   userId: string;
   name: string;
   email: string;
   phone: string | null;
+  dateOfBirth: Date | null;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -99,6 +101,15 @@ export function EditCustomerDialog({
               id={`edit-customer-phone-${userId}`}
               name="phone"
               defaultValue={phone ?? ""}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={`edit-customer-dob-${userId}`}>Tanggal lahir (opsional)</Label>
+            <Input
+              id={`edit-customer-dob-${userId}`}
+              name="dateOfBirth"
+              type="date"
+              defaultValue={dateOfBirth ? dateOfBirth.toISOString().slice(0, 10) : ""}
             />
           </div>
           <DialogFooter>

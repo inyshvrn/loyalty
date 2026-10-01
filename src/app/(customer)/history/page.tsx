@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { getRecentStamps, getRecentClaims } from "@/lib/loyalty";
 import { getReferralCreditsForCustomer } from "@/lib/referral";
+import { getBirthdayRewardCreditsForCustomer } from "@/lib/birthday-reward";
 import { formatRelativeIndonesian, formatDiscountAmount } from "@/lib/format";
 
 const creditStatusLabel = {
@@ -17,10 +18,11 @@ export default async function HistoryPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const [visits, claims, referralCredits] = await Promise.all([
+  const [visits, claims, referralCredits, birthdayRewardCredits] = await Promise.all([
     getRecentStamps(session.user.id, 50),
     getRecentClaims(session.user.id, 50),
     getReferralCreditsForCustomer(session.user.id, 50),
+    getBirthdayRewardCreditsForCustomer(session.user.id, 50),
   ]);
 
   return (
@@ -32,6 +34,7 @@ export default async function HistoryPage() {
           <TabsTrigger value="visits">Kunjungan</TabsTrigger>
           <TabsTrigger value="claims">Reward Diklaim</TabsTrigger>
           <TabsTrigger value="referrals">Diskon Referral</TabsTrigger>
+          <TabsTrigger value="birthday">Diskon Ultah</TabsTrigger>
         </TabsList>
 
         <TabsContent value="visits" className="mt-4">
@@ -89,6 +92,35 @@ export default async function HistoryPage() {
           ) : (
             <Card className="divide-y divide-border gap-0 p-0">
               {referralCredits.map((credit) => (
+                <div
+                  key={credit.id}
+                  className="flex items-center justify-between px-4 py-3 text-sm"
+                >
+                  <div>
+                    <p className="font-medium text-foreground">
+                      Diskon {formatDiscountAmount(credit.discountType, credit.discountValue)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatRelativeIndonesian(credit.createdAt)}
+                    </p>
+                  </div>
+                  <Badge variant={credit.status === "AVAILABLE" ? "secondary" : "outline"}>
+                    {creditStatusLabel[credit.status]}
+                  </Badge>
+                </div>
+              ))}
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="birthday" className="mt-4">
+          {birthdayRewardCredits.length === 0 ? (
+            <Card className="px-4 py-6 text-center text-sm text-muted-foreground">
+              Belum ada diskon ulang tahun.
+            </Card>
+          ) : (
+            <Card className="divide-y divide-border gap-0 p-0">
+              {birthdayRewardCredits.map((credit) => (
                 <div
                   key={credit.id}
                   className="flex items-center justify-between px-4 py-3 text-sm"

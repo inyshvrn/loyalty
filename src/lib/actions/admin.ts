@@ -582,14 +582,71 @@ export async function updateReferralDiscountAction(
   };
 }
 
+const birthdayRewardSettingSchema = z
+  .object({
+    birthdayRewardEnabled: z.boolean(),
+    birthdayRewardMinStamps: z.coerce.number().int().min(0, "Tidak boleh negatif"),
+    birthdayRewardDiscountType: z.enum(["PERCENT", "FIXED"]),
+    birthdayRewardDiscountValue: z.coerce.number().int().min(1, "Minimal 1"),
+  })
+  .refine(
+    (data) =>
+      data.birthdayRewardDiscountType !== "PERCENT" || data.birthdayRewardDiscountValue <= 100,
+    { message: "Maksimal 100 untuk persen", path: ["birthdayRewardDiscountValue"] }
+  );
+
+export async function updateBirthdayRewardSettingAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  await requireAdmin();
+
+  // A Base UI Switch posts "on" when checked, or is simply absent from the
+  // FormData when unchecked — not "true"/"false" — so read it that way
+  // rather than z.coerce.boolean() (which would treat any non-empty string,
+  // including "off", as truthy).
+  const parsed = birthdayRewardSettingSchema.safeParse({
+    birthdayRewardEnabled: formData.get("birthdayRewardEnabled") === "on",
+    birthdayRewardMinStamps: formData.get("birthdayRewardMinStamps"),
+    birthdayRewardDiscountType: formData.get("birthdayRewardDiscountType"),
+    birthdayRewardDiscountValue: formData.get("birthdayRewardDiscountValue"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Nilai tidak valid" };
+  }
+
+  await prisma.loyaltySetting.upsert({
+    where: { id: 1 },
+    update: parsed.data,
+    create: { id: 1, ...parsed.data },
+  });
+
+  revalidatePath("/admin/settings");
+  return {
+    success: parsed.data.birthdayRewardEnabled
+      ? `Reward ulang tahun diaktifkan — minimal ${parsed.data.birthdayRewardMinStamps} stempel, diskon ${
+          parsed.data.birthdayRewardDiscountType === "PERCENT"
+            ? `${parsed.data.birthdayRewardDiscountValue}%`
+            : `Rp${parsed.data.birthdayRewardDiscountValue.toLocaleString("id-ID")}`
+        }.`
+      : "Reward ulang tahun dinonaktifkan.",
+  };
+}
+
 // ---- Customer migration (paper-card customers moving to the app) ----
 
-const migrateCustomerSchema = z.object({
-  name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
-  email: z.string().trim().toLowerCase().email("Format email tidak valid"),
-  phone: phoneSchema,
-  initialStamps: z.coerce.number().int().min(0, "Tidak boleh negatif").max(999),
-});
+const migrateCustomerSchema = z
+  .object({
+    name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
+    email: z.string().trim().toLowerCase().email("Format email tidak valid"),
+    phone: phoneSchema,
+    initialStamps: z.coerce.number().int().min(0, "Tidak boleh negatif").max(999),
+    dateOfBirth: z.union([z.literal(""), z.coerce.date()]).optional(),
+  })
+  .refine((data) => !(data.dateOfBirth instanceof Date) || data.dateOfBirth <= new Date(), {
+    message: "Tanggal lahir tidak boleh di masa depan.",
+    path: ["dateOfBirth"],
+  });
 
 export async function migrateCustomerAction(
   _prevState: ActionState,
@@ -602,11 +659,12 @@ export async function migrateCustomerAction(
     email: formData.get("email"),
     phone: formData.get("phone"),
     initialStamps: formData.get("initialStamps"),
+    dateOfBirth: formData.get("dateOfBirth") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
   }
-  const { name, email, phone, initialStamps } = parsed.data;
+  const { name, email, phone, initialStamps, dateOfBirth } = parsed.data;
 
   const emailTaken = await prisma.user.findUnique({ where: { email } });
   if (emailTaken) {
@@ -630,6 +688,7 @@ export async function migrateCustomerAction(
       role: "CUSTOMER",
       emailVerified: true, // admin registers them in person, no self-verification needed
       referralCode: await createUniqueReferralCode(),
+      dateOfBirth: dateOfBirth || null,
     },
   });
 
@@ -648,12 +707,18 @@ export async function migrateCustomerAction(
 
 // ---- Customer edit ----
 
-const updateCustomerSchema = z.object({
-  userId: z.string().min(1),
-  name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
-  email: z.string().trim().toLowerCase().email("Format email tidak valid"),
-  phone: z.union([z.literal(""), phoneSchema]),
-});
+const updateCustomerSchema = z
+  .object({
+    userId: z.string().min(1),
+    name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
+    email: z.string().trim().toLowerCase().email("Format email tidak valid"),
+    phone: z.union([z.literal(""), phoneSchema]),
+    dateOfBirth: z.union([z.literal(""), z.coerce.date()]).optional(),
+  })
+  .refine((data) => !(data.dateOfBirth instanceof Date) || data.dateOfBirth <= new Date(), {
+    message: "Tanggal lahir tidak boleh di masa depan.",
+    path: ["dateOfBirth"],
+  });
 
 export async function updateCustomerAction(
   _prevState: ActionState,
@@ -666,11 +731,12 @@ export async function updateCustomerAction(
     name: formData.get("name"),
     email: formData.get("email"),
     phone: formData.get("phone") ?? "",
+    dateOfBirth: formData.get("dateOfBirth") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
   }
-  const { userId, name, email, phone } = parsed.data;
+  const { userId, name, email, phone, dateOfBirth } = parsed.data;
 
   const customer = await prisma.user.findUnique({ where: { id: userId } });
   if (!customer || customer.role !== "CUSTOMER") {
@@ -695,7 +761,7 @@ export async function updateCustomerAction(
 
   await prisma.user.update({
     where: { id: userId },
-    data: { name, email, phone: phone || null },
+    data: { name, email, phone: phone || null, dateOfBirth: dateOfBirth || null },
   });
 
   revalidatePath(`/admin/customers/${userId}`);
@@ -711,14 +777,16 @@ export async function deleteCustomerAction(userId: string): Promise<CorrectionRe
     return { ok: false, error: "Pelanggan tidak ditemukan." };
   }
 
-  const [stampCount, claimCount, grantRequestCount, referralCreditCount] = await Promise.all([
-    prisma.stamp.count({ where: { customerId: userId } }),
-    prisma.rewardClaim.count({ where: { customerId: userId } }),
-    prisma.stampGrantRequest.count({ where: { customerId: userId } }),
-    prisma.referralCredit.count({
-      where: { OR: [{ referrerId: userId }, { referredUserId: userId }] },
-    }),
-  ]);
+  const [stampCount, claimCount, grantRequestCount, referralCreditCount, birthdayRewardCreditCount] =
+    await Promise.all([
+      prisma.stamp.count({ where: { customerId: userId } }),
+      prisma.rewardClaim.count({ where: { customerId: userId } }),
+      prisma.stampGrantRequest.count({ where: { customerId: userId } }),
+      prisma.referralCredit.count({
+        where: { OR: [{ referrerId: userId }, { referredUserId: userId }] },
+      }),
+      prisma.birthdayRewardCredit.count({ where: { customerId: userId } }),
+    ]);
   if (stampCount > 0 || claimCount > 0 || grantRequestCount > 0) {
     return {
       ok: false,
@@ -731,6 +799,13 @@ export async function deleteCustomerAction(userId: string): Promise<CorrectionRe
       ok: false,
       error:
         "Pelanggan ini punya riwayat referral (mengajak teman atau diajak teman) — tidak bisa dihapus permanen agar riwayat tetap utuh.",
+    };
+  }
+  if (birthdayRewardCreditCount > 0) {
+    return {
+      ok: false,
+      error:
+        "Pelanggan ini punya riwayat reward ulang tahun — tidak bisa dihapus permanen agar riwayat tetap utuh.",
     };
   }
 
@@ -888,6 +963,76 @@ export async function voidReferralCreditAction(creditId: string): Promise<Correc
   });
 
   revalidatePath(`/admin/customers/${credit.referrerId}`);
+  return { ok: true };
+}
+
+// ---- Birthday reward credit corrections ----
+
+/** Same correction pattern as cancelReferralCreditRedemptionAction above —
+ * a barista redeemed a birthday reward by mistake, so it's reverted back to
+ * spendable. cancelledAt/cancelledByAdminId stay as a permanent "this was
+ * corrected" audit marker even though status ends up AVAILABLE again. */
+export async function cancelBirthdayRewardRedemptionAction(
+  creditId: string
+): Promise<CorrectionResult> {
+  const admin = await requireAdmin();
+
+  const credit = await prisma.birthdayRewardCredit.findUnique({ where: { id: creditId } });
+  if (!credit) {
+    return { ok: false, error: "Kredit reward ulang tahun tidak ditemukan." };
+  }
+  if (credit.status !== "REDEEMED") {
+    return { ok: false, error: "Kredit ini belum pernah dipakai." };
+  }
+
+  await prisma.birthdayRewardCredit.update({
+    where: { id: creditId },
+    data: {
+      status: "AVAILABLE",
+      redeemedAt: null,
+      redeemedByBaristaId: null,
+      outletId: null,
+      cancelledAt: new Date(),
+      cancelledByAdminId: admin.id,
+    },
+  });
+
+  revalidatePath(`/admin/customers/${credit.customerId}`);
+  return { ok: true };
+}
+
+/** Permanently voids a birthday reward credit that hasn't been redeemed yet
+ * — e.g. later found to be ineligible or fraudulent. Terminal: unlike the
+ * correction above, a CANCELLED credit never becomes spendable again, and
+ * the @@unique([customerId, year]) row stays in place so a fresh grant
+ * can't be re-triggered for that same year. */
+export async function voidBirthdayRewardCreditAction(creditId: string): Promise<CorrectionResult> {
+  const admin = await requireAdmin();
+
+  const credit = await prisma.birthdayRewardCredit.findUnique({ where: { id: creditId } });
+  if (!credit) {
+    return { ok: false, error: "Kredit reward ulang tahun tidak ditemukan." };
+  }
+  if (credit.status !== "AVAILABLE") {
+    return {
+      ok: false,
+      error:
+        credit.status === "CANCELLED"
+          ? "Kredit ini sudah dibatalkan sebelumnya."
+          : "Kredit ini sudah dipakai — batalkan pemakaiannya dulu kalau mau dibatalkan permanen.",
+    };
+  }
+
+  await prisma.birthdayRewardCredit.update({
+    where: { id: creditId },
+    data: {
+      status: "CANCELLED",
+      cancelledAt: new Date(),
+      cancelledByAdminId: admin.id,
+    },
+  });
+
+  revalidatePath(`/admin/customers/${credit.customerId}`);
   return { ok: true };
 }
 

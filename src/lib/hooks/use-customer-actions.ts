@@ -6,6 +6,7 @@ import {
   addStampAction,
   confirmRewardAction,
   redeemReferralCreditAction,
+  redeemBirthdayRewardAction,
   type CustomerStatus,
 } from "@/lib/actions/barista";
 
@@ -73,5 +74,30 @@ export function useCustomerActions(onUpdate: (data: CustomerStatus) => void) {
     }
   }
 
-  return { busyId, handleAddStamp, handleConfirmReward, handleRedeemCredit };
+  async function handleRedeemBirthdayReward(customerId: string) {
+    setBusyId(customerId);
+    try {
+      const res = await redeemBirthdayRewardAction(customerId);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      onUpdate(res.data);
+      toast.success("Diskon ulang tahun diterapkan", {
+        description: res.data.name,
+      });
+    } catch {
+      toast.error("Terjadi kesalahan. Coba lagi.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return {
+    busyId,
+    handleAddStamp,
+    handleConfirmReward,
+    handleRedeemCredit,
+    handleRedeemBirthdayReward,
+  };
 }

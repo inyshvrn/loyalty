@@ -31,13 +31,19 @@ async function issueAndSendVerification(userId: string, email: string) {
 
 export type ActionState = { error?: string; success?: string } | null;
 
-const registerSchema = z.object({
-  name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
-  email: z.string().trim().toLowerCase().email("Format email tidak valid"),
-  phone: phoneSchema,
-  password: z.string().min(8, "Kata sandi minimal 8 karakter"),
-  referralCode: z.union([z.literal(""), z.string().trim().max(20)]).optional(),
-});
+const registerSchema = z
+  .object({
+    name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
+    email: z.string().trim().toLowerCase().email("Format email tidak valid"),
+    phone: phoneSchema,
+    password: z.string().min(8, "Kata sandi minimal 8 karakter"),
+    referralCode: z.union([z.literal(""), z.string().trim().max(20)]).optional(),
+    dateOfBirth: z.union([z.literal(""), z.coerce.date()]).optional(),
+  })
+  .refine((data) => !(data.dateOfBirth instanceof Date) || data.dateOfBirth <= new Date(), {
+    message: "Tanggal lahir tidak boleh di masa depan.",
+    path: ["dateOfBirth"],
+  });
 
 export async function registerAction(
   _prevState: ActionState,
@@ -49,13 +55,14 @@ export async function registerAction(
     phone: formData.get("phone"),
     password: formData.get("password"),
     referralCode: formData.get("referralCode") ?? "",
+    dateOfBirth: formData.get("dateOfBirth") ?? "",
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid" };
   }
 
-  const { name, email, phone, password, referralCode } = parsed.data;
+  const { name, email, phone, password, referralCode, dateOfBirth } = parsed.data;
 
   try {
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -95,6 +102,7 @@ export async function registerAction(
           role: "CUSTOMER",
           referralCode: await createUniqueReferralCode(),
           referredById: referrerId,
+          dateOfBirth: dateOfBirth || null,
         },
       });
       await issueAndSendVerification(user.id, user.email);

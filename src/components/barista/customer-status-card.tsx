@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { RequestInitialGrantDialog } from "@/components/barista/request-initial-grant-dialog";
 import { ConfirmRewardDialog } from "@/components/barista/confirm-reward-dialog";
 import { RedeemReferralCreditDialog } from "@/components/barista/redeem-referral-credit-dialog";
+import { RedeemBirthdayRewardDialog } from "@/components/barista/redeem-birthday-reward-dialog";
 import type { CustomerStatus } from "@/lib/actions/barista";
 
 export function CustomerStatusCard({
@@ -13,6 +14,7 @@ export function CustomerStatusCard({
   onConfirmReward,
   onGrantRequested,
   onRedeemCredit,
+  onRedeemBirthday,
 }: {
   status: CustomerStatus;
   busy: boolean;
@@ -20,6 +22,7 @@ export function CustomerStatusCard({
   onConfirmReward: () => void;
   onGrantRequested?: (data: CustomerStatus) => void;
   onRedeemCredit: () => void;
+  onRedeemBirthday: () => void;
 }) {
   return (
     <Card className="flex-col gap-3 p-4">
@@ -47,6 +50,11 @@ export function CustomerStatusCard({
             {status.availableReferralCredits > 0 && (
               <Badge variant="outline" className="shrink-0">
                 Diskon Referral &times;{status.availableReferralCredits}
+              </Badge>
+            )}
+            {status.birthdayRewardAvailable && (
+              <Badge variant="outline" className="shrink-0">
+                Diskon Ultah
               </Badge>
             )}
           </div>
@@ -92,6 +100,14 @@ export function CustomerStatusCard({
           customerName={status.name}
           busy={busy}
           onRedeem={onRedeemCredit}
+        />
+      )}
+      {status.birthdayRewardAvailable && (
+        <RedeemBirthdayRewardDialog
+          customerId={status.id}
+          customerName={status.name}
+          busy={busy}
+          onRedeem={onRedeemBirthday}
         />
       )}
     </Card>

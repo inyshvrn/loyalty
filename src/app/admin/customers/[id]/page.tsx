@@ -13,11 +13,13 @@ import {
   getRecentClaimsWithStaff,
 } from "@/lib/loyalty";
 import { getReferralCreditsForAdmin } from "@/lib/referral";
+import { getBirthdayRewardCreditsForAdmin } from "@/lib/birthday-reward";
 import { formatRelativeIndonesian, formatDiscountAmount } from "@/lib/format";
 import { AddManualStampButton } from "@/components/admin/add-manual-stamp-button";
 import { RemoveStampButton } from "@/components/admin/remove-stamp-button";
 import { CancelClaimButton } from "@/components/admin/cancel-claim-button";
 import { ReferralCreditActions } from "@/components/admin/referral-credit-actions";
+import { BirthdayRewardCreditActions } from "@/components/admin/birthday-reward-credit-actions";
 import { EditCustomerDialog } from "@/components/admin/edit-customer-dialog";
 import { DeleteCustomerButton } from "@/components/admin/delete-customer-button";
 import { ViewQrDialog } from "@/components/admin/view-qr-dialog";
@@ -34,13 +36,15 @@ export default async function AdminCustomerDetailPage(
   }
 
   const threshold = await getStampThreshold();
-  const [progress, stamps, claims, everStampCount, referralCredits] = await Promise.all([
-    getCustomerProgressWithThreshold(id, threshold),
-    getRecentStampsWithStaff(id, 30),
-    getRecentClaimsWithStaff(id, 30),
-    prisma.stamp.count({ where: { customerId: id } }),
-    getReferralCreditsForAdmin(id, 30),
-  ]);
+  const [progress, stamps, claims, everStampCount, referralCredits, birthdayRewardCredits] =
+    await Promise.all([
+      getCustomerProgressWithThreshold(id, threshold),
+      getRecentStampsWithStaff(id, 30),
+      getRecentClaimsWithStaff(id, 30),
+      prisma.stamp.count({ where: { customerId: id } }),
+      getReferralCreditsForAdmin(id, 30),
+      getBirthdayRewardCreditsForAdmin(id, 30),
+    ]);
 
   let qrDataUrl: string | null = null;
   try {
@@ -68,6 +72,7 @@ export default async function AdminCustomerDetailPage(
               name={customer.name}
               email={customer.email}
               phone={customer.phone}
+              dateOfBirth={customer.dateOfBirth}
             />
             <DeleteCustomerButton userId={customer.id} name={customer.name} />
             <ViewQrDialog name={customer.name} qrDataUrl={qrDataUrl} />
@@ -75,6 +80,9 @@ export default async function AdminCustomerDetailPage(
           <p className="text-sm text-muted-foreground">
             {customer.email}
             {customer.phone ? ` · ${customer.phone}` : ""}
+            {customer.dateOfBirth
+              ? ` · Lahir ${customer.dateOfBirth.toLocaleDateString("id-ID", { day: "numeric", month: "long", timeZone: "UTC" })}`
+              : ""}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <Badge variant={customer.emailVerified ? "secondary" : "outline"}>
@@ -105,6 +113,7 @@ export default async function AdminCustomerDetailPage(
           <TabsTrigger value="visits">Kunjungan</TabsTrigger>
           <TabsTrigger value="claims">Reward</TabsTrigger>
           <TabsTrigger value="referrals">Referral</TabsTrigger>
+          <TabsTrigger value="birthday">Ultah</TabsTrigger>
         </TabsList>
 
         <TabsContent value="visits" className="mt-4">
@@ -218,6 +227,59 @@ export default async function AdminCustomerDetailPage(
                           : "Dibatalkan"}
                     </Badge>
                     <ReferralCreditActions creditId={credit.id} status={credit.status} />
+                  </div>
+                </div>
+              ))}
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="birthday" className="mt-4">
+          {birthdayRewardCredits.length === 0 ? (
+            <Card className="px-4 py-6 text-center text-sm text-muted-foreground">
+              Belum pernah dapat reward ulang tahun.
+            </Card>
+          ) : (
+            <Card className="divide-y divide-border gap-0 p-0">
+              {birthdayRewardCredits.map((credit) => (
+                <div
+                  key={credit.id}
+                  className="flex items-center justify-between px-4 py-3 text-sm"
+                >
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {credit.year}
+                      {" · "}
+                      Diskon {formatDiscountAmount(credit.discountType, credit.discountValue)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatRelativeIndonesian(credit.createdAt)}
+                      {credit.status === "REDEEMED" && credit.redeemedByBarista && (
+                        <>
+                          {" · dipakai oleh "}
+                          {credit.redeemedByBarista.name}
+                          {credit.outlet && ` · ${credit.outlet.name}`}
+                        </>
+                      )}
+                      {credit.status === "CANCELLED" && credit.cancelledByAdmin && (
+                        <>
+                          {" · dibatalkan oleh "}
+                          {credit.cancelledByAdmin.name}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Badge
+                      variant={credit.status === "AVAILABLE" ? "secondary" : "outline"}
+                    >
+                      {credit.status === "AVAILABLE"
+                        ? "Tersedia"
+                        : credit.status === "REDEEMED"
+                          ? "Dipakai"
+                          : "Dibatalkan"}
+                    </Badge>
+                    <BirthdayRewardCreditActions creditId={credit.id} status={credit.status} />
                   </div>
                 </div>
               ))}

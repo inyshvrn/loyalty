@@ -29,8 +29,9 @@ model Outlet {
   baristas User[]  @relation("BaristaOutlet")
   stamps   Stamp[] @relation("StampOutlet")
 
-  stampGrantRequests StampGrantRequest[] @relation("StampGrantRequestOutlet")
-  referralCredits    ReferralCredit[]    @relation("ReferralCreditOutlet")
+  stampGrantRequests    StampGrantRequest[]    @relation("StampGrantRequestOutlet")
+  referralCredits       ReferralCredit[]       @relation("ReferralCreditOutlet")
+  birthdayRewardCredits BirthdayRewardCredit[] @relation("BirthdayRewardCreditOutlet")
 }
 
 model User {
@@ -78,6 +79,17 @@ model User {
   referralCreditsFromMe    ReferralCredit[] @relation("ReferredUserCredits")
   referralCreditsRedeemed  ReferralCredit[] @relation("BaristaRedeemedCredits")
   referralCreditsCancelled ReferralCredit[] @relation("AdminCancelledReferralCredits")
+
+  /// Optional — only ever set for role CUSTOMER. Settable at registration
+  /// or later by an admin (no customer self-service profile editing exists
+  /// in this app). @db.Date because only the calendar date matters, never
+  /// a time of day; see BirthdayRewardCredit for how it's matched against
+  /// "today."
+  dateOfBirth DateTime? @db.Date
+
+  birthdayRewardCreditsEarned    BirthdayRewardCredit[] @relation("BirthdayRewardCustomer")
+  birthdayRewardCreditsRedeemed  BirthdayRewardCredit[] @relation("BaristaRedeemedBirthdayCredits")
+  birthdayRewardCreditsCancelled BirthdayRewardCredit[] @relation("AdminCancelledBirthdayCredits")
 }
 
 /// One row per QR scan. Current progress toward the threshold is derived —
@@ -137,14 +149,22 @@ model RewardClaim {
 
 /// Single-row config table — application code always reads/writes id 1.
 model LoyaltySetting {
-  id                    Int          @id @default(1)
-  stampThreshold        Int          @default(7)
+  id                          Int          @id @default(1)
+  stampThreshold              Int          @default(7)
   /// Discount awarded per successful referral — snapshotted onto each
   /// ReferralCredit at the moment it's earned, so changing this later never
   /// retroactively alters a credit already earned but not yet redeemed.
-  referralDiscountType  DiscountType @default(PERCENT)
-  referralDiscountValue Int          @default(10)
-  updatedAt             DateTime     @updatedAt
+  referralDiscountType        DiscountType @default(PERCENT)
+  referralDiscountValue       Int          @default(10)
+  /// Birthday reward config — same snapshot-at-grant-time principle as the
+  /// referral fields above. Disabled by default since the owner hasn't
+  /// decided the threshold/discount yet; enabling and tuning these is
+  /// meant to happen from the Settings page, not by changing code.
+  birthdayRewardEnabled       Boolean      @default(false)
+  birthdayRewardMinStamps     Int          @default(1)
+  birthdayRewardDiscountType  DiscountType @default(PERCENT)
+  birthdayRewardDiscountValue Int          @default(10)
+  updatedAt                   DateTime     @updatedAt
 }
 
 enum StampGrantStatus {
@@ -192,6 +212,8 @@ enum DiscountType {
   FIXED
 }
 
+/// Shared by ReferralCredit and BirthdayRewardCredit — both have the exact
+/// same three-state lifecycle, so this one enum backs both models.
 enum ReferralCreditStatus {
   AVAILABLE
   REDEEMED
@@ -244,4 +266,45 @@ model ReferralCredit {
   cancelledByAdmin   User?     @relation("AdminCancelledReferralCredits", fields: [cancelledByAdminId], references: [id])
 
   @@index([referrerId])
+}
+
+/// A one-time discount credit granted when a barista looks up a customer on
+/// their exact birthday (store-local calendar day, no grace window) and
+/// they meet the admin-configured minimum stamp count. Unlike
+/// ReferralCredit, there's no separate earning event before the qualifying
+/// visit — the visit is both the earning and (usually) the spending moment
+/// — so a fresh grant is created directly with status REDEEMED rather than
+/// passing through AVAILABLE first. AVAILABLE only ever appears via an
+/// admin's "Batalkan Pemakaian" correction reverting a mistaken redemption,
+/// which is then honorable on any later visit regardless of year (mirrors
+/// ReferralCredit having no year concept in that check at all).
+/// @@unique([customerId, year]) is the actual once-per-calendar-year
+/// enforcement — a row in ANY status for that year (including CANCELLED)
+/// blocks a new fresh grant, so voiding a fraudulent one doesn't hand out a
+/// second attempt the same year. discountType/discountValue are
+/// snapshotted from LoyaltySetting at grant time, same reasoning as
+/// ReferralCredit. Never hard-deleted — same status-based correction
+/// pattern as ReferralCredit/RewardClaim.
+model BirthdayRewardCredit {
+  id            String               @id @default(cuid())
+  customerId    String
+  customer      User                 @relation("BirthdayRewardCustomer", fields: [customerId], references: [id])
+  /// Store-local calendar year this reward was granted for.
+  year          Int
+  discountType  DiscountType
+  discountValue Int
+  status        ReferralCreditStatus @default(AVAILABLE)
+  createdAt     DateTime             @default(now())
+
+  redeemedAt          DateTime?
+  redeemedByBaristaId String?
+  redeemedByBarista   User?     @relation("BaristaRedeemedBirthdayCredits", fields: [redeemedByBaristaId], references: [id])
+  outletId            String?
+  outlet              Outlet?   @relation("BirthdayRewardCreditOutlet", fields: [outletId], references: [id])
+
+  cancelledAt        DateTime?
+  cancelledByAdminId String?
+  cancelledByAdmin   User?     @relation("AdminCancelledBirthdayCredits", fields: [cancelledByAdminId], references: [id])
+
+  @@unique([customerId, year])
 }

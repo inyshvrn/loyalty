@@ -23,6 +23,7 @@ export function RegisterForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [password, setPassword] = useState("");
   const [referralCode, setReferralCode] = useState(defaultReferralCode ?? "");
 
@@ -62,6 +63,16 @@ export function RegisterForm({
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           required
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="dateOfBirth">Tanggal lahir (opsional)</Label>
+        <Input
+          id="dateOfBirth"
+          name="dateOfBirth"
+          type="date"
+          value={dateOfBirth}
+          onChange={(e) => setDateOfBirth(e.target.value)}
         />
       </div>
       <div className="flex flex-col gap-1.5">
