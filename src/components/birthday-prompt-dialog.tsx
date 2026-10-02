@@ -106,7 +106,7 @@ export function BirthdayPromptDialog() {
                 kamu mampir pas hari ulang tahunmu.
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter className="flex-col gap-2">
+            <DialogFooter className="flex-col gap-2 sm:flex-col sm:justify-start">
               <Button type="button" className="w-full" onClick={() => setStep("fill")}>
                 Isi Sekarang
               </Button>
