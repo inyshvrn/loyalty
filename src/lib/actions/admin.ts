@@ -769,6 +769,26 @@ export async function updateCustomerAction(
   return { success: `Data ${name} diperbarui.` };
 }
 
+/** Blocks login via the same `isActive` gate already used for barista/admin
+ * accounts (see authorize() in auth.ts) — nothing else in the app checks
+ * it, same as those two roles. Exists for duplicate/dummy customer
+ * accounts that already have history and so can't be hard-deleted (see
+ * deleteCustomerAction's guards below): deactivating hides them from
+ * active use without destroying that history or risking any other
+ * customer's records, and is reversible if toggled by mistake. */
+export async function setCustomerActiveAction(userId: string, isActive: boolean) {
+  await requireAdmin();
+
+  const customer = await prisma.user.findUnique({ where: { id: userId } });
+  if (!customer || customer.role !== "CUSTOMER") {
+    throw new Error("Pelanggan tidak ditemukan.");
+  }
+
+  await prisma.user.update({ where: { id: userId }, data: { isActive } });
+  revalidatePath(`/admin/customers/${userId}`);
+  revalidatePath("/admin/customers");
+}
+
 export async function deleteCustomerAction(userId: string): Promise<CorrectionResult> {
   await requireAdmin();
 

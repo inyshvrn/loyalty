@@ -47,6 +47,15 @@ model User {
   outletId      String?
   outlet        Outlet?  @relation("BaristaOutlet", fields: [outletId], references: [id])
 
+  /// Sequential, human-readable member number — separate from `id` (a
+  /// cuid, never meant to be read aloud, typed, or quoted to a customer).
+  /// Assigned via a DB sequence on every User row (staff included, for
+  /// simplicity) but only ever displayed for role CUSTOMER, formatted as
+  /// "HC-00001" by formatCustomerNumber(). Exists so admin has a short
+  /// reference to quote a customer or write down, and so the data stays
+  /// orderly if this ever needs to integrate or merge with another system.
+  customerNumber Int @unique @default(autoincrement())
+
   /// Reset to 0 on a successful login. Once it crosses the threshold in
   /// authorize(), lockedUntil is set and further attempts are rejected
   /// without even checking the password, until it passes.

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { prisma } from "@/lib/prisma";
 import { getStampThreshold, getAllCustomerStampCounts } from "@/lib/loyalty";
+import { formatCustomerNumber } from "@/lib/format";
 import { sortByNameInsensitive } from "@/lib/utils";
 import { MigrateCustomerDialog } from "@/components/admin/migrate-customer-dialog";
 import { ExportCustomersMenu } from "@/components/admin/export-customers-menu";
@@ -79,6 +80,7 @@ export default async function AdminCustomersPage(
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>No. Pelanggan</TableHead>
                   <TableHead>Nama</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Progres</TableHead>
@@ -88,6 +90,9 @@ export default async function AdminCustomersPage(
               <TableBody>
                 {rows.map((c) => (
                   <TableRow key={c.id}>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {formatCustomerNumber(c.customerNumber)}
+                    </TableCell>
                     <TableCell className="font-medium text-foreground">
                       <Link
                         href={`/admin/customers/${c.id}`}
@@ -142,8 +147,8 @@ export default async function AdminCustomersPage(
                       )}
                     </div>
                     <p className="truncate text-xs text-muted-foreground">
-                      {c.email} &middot; {c.progress.stamps}/{c.progress.threshold}{" "}
-                      stempel
+                      {formatCustomerNumber(c.customerNumber)} &middot; {c.email}{" "}
+                      &middot; {c.progress.stamps}/{c.progress.threshold} stempel
                     </p>
                   </div>
                   <ChevronRight className="size-4 shrink-0 text-muted-foreground" />

@@ -14,7 +14,7 @@ import {
 } from "@/lib/loyalty";
 import { getReferralCreditsForAdmin } from "@/lib/referral";
 import { getBirthdayRewardCreditsForAdmin } from "@/lib/birthday-reward";
-import { formatRelativeIndonesian, formatDiscountAmount } from "@/lib/format";
+import { formatRelativeIndonesian, formatDiscountAmount, formatCustomerNumber } from "@/lib/format";
 import { AddManualStampButton } from "@/components/admin/add-manual-stamp-button";
 import { RemoveStampButton } from "@/components/admin/remove-stamp-button";
 import { CancelClaimButton } from "@/components/admin/cancel-claim-button";
@@ -22,6 +22,7 @@ import { ReferralCreditActions } from "@/components/admin/referral-credit-action
 import { BirthdayRewardCreditActions } from "@/components/admin/birthday-reward-credit-actions";
 import { EditCustomerDialog } from "@/components/admin/edit-customer-dialog";
 import { DeleteCustomerButton } from "@/components/admin/delete-customer-button";
+import { ToggleCustomerActiveButton } from "@/components/admin/toggle-customer-active-button";
 import { ViewQrDialog } from "@/components/admin/view-qr-dialog";
 import { GrantInitialStampsDialog } from "@/components/admin/grant-initial-stamps-dialog";
 
@@ -75,9 +76,12 @@ export default async function AdminCustomerDetailPage(
               dateOfBirth={customer.dateOfBirth}
             />
             <DeleteCustomerButton userId={customer.id} name={customer.name} />
+            <ToggleCustomerActiveButton userId={customer.id} isActive={customer.isActive} />
             <ViewQrDialog name={customer.name} qrDataUrl={qrDataUrl} />
           </div>
           <p className="text-sm text-muted-foreground">
+            {formatCustomerNumber(customer.customerNumber)}
+            {" · "}
             {customer.email}
             {customer.phone ? ` · ${customer.phone}` : ""}
             {customer.dateOfBirth
@@ -88,6 +92,11 @@ export default async function AdminCustomerDetailPage(
             <Badge variant={customer.emailVerified ? "secondary" : "outline"}>
               {customer.emailVerified ? "Terverifikasi" : "Belum Verifikasi"}
             </Badge>
+            {!customer.isActive && (
+              <Badge variant="outline" className="border-destructive/40 text-destructive">
+                Nonaktif
+              </Badge>
+            )}
             {progress.eligible && (
               <Badge className="border-transparent bg-reward text-reward-foreground">
                 Siap Diklaim

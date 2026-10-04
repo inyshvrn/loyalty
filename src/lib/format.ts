@@ -20,3 +20,8 @@ export function formatDiscountAmount(type: DiscountType, value: number): string 
   if (type === "PERCENT") return `${value}%`;
   return `Rp${value.toLocaleString("id-ID")}`;
 }
+
+/** Formats User.customerNumber for display — "HC-00001". */
+export function formatCustomerNumber(n: number): string {
+  return `HC-${String(n).padStart(5, "0")}`;
+}
