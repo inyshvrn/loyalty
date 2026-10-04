@@ -117,6 +117,10 @@ export type CustomerStatus = {
   stamps: number;
   threshold: number;
   eligible: boolean;
+  /** True if this customer already received a Stamp today (store-local
+   * day) — lets the UI disable "Tambah Stempel" proactively instead of
+   * only rejecting it reactively after a click. */
+  stampedToday: boolean;
   /** True only for a customer who has never received a single Stamp — the
    * one case an initial bulk grant (physical-card transfer) makes sense. */
   eligibleForInitialGrant: boolean;
@@ -134,24 +138,37 @@ export type CustomerStatus = {
 
 async function buildCustomerStatus(customer: User): Promise<CustomerStatus> {
   const today = getStoreToday();
-  const [threshold, lastClaimAt, everStampCount, pendingGrant, availableReferralCredits, birthdaySetting, birthdayCredits] =
-    await Promise.all([
-      getStampThreshold(),
-      getProgressCutoff(customer.id),
-      prisma.stamp.count({ where: { customerId: customer.id } }),
-      prisma.stampGrantRequest.findFirst({
-        where: { customerId: customer.id, status: "PENDING" },
-        select: { id: true, count: true, createdAt: true },
-      }),
-      prisma.referralCredit.count({
-        where: { referrerId: customer.id, status: "AVAILABLE" },
-      }),
-      getBirthdayRewardSetting(),
-      prisma.birthdayRewardCredit.findMany({
-        where: { customerId: customer.id, OR: [{ status: "AVAILABLE" }, { year: today.year }] },
-        select: { status: true, year: true },
-      }),
-    ]);
+  const { start: todayStart, end: todayEnd } = getStoreDayBounds();
+  const [
+    threshold,
+    lastClaimAt,
+    everStampCount,
+    pendingGrant,
+    availableReferralCredits,
+    birthdaySetting,
+    birthdayCredits,
+    stampedTodayRow,
+  ] = await Promise.all([
+    getStampThreshold(),
+    getProgressCutoff(customer.id),
+    prisma.stamp.count({ where: { customerId: customer.id } }),
+    prisma.stampGrantRequest.findFirst({
+      where: { customerId: customer.id, status: "PENDING" },
+      select: { id: true, count: true, createdAt: true },
+    }),
+    prisma.referralCredit.count({
+      where: { referrerId: customer.id, status: "AVAILABLE" },
+    }),
+    getBirthdayRewardSetting(),
+    prisma.birthdayRewardCredit.findMany({
+      where: { customerId: customer.id, OR: [{ status: "AVAILABLE" }, { year: today.year }] },
+      select: { status: true, year: true },
+    }),
+    prisma.stamp.findFirst({
+      where: { customerId: customer.id, createdAt: { gte: todayStart, lt: todayEnd } },
+      select: { id: true },
+    }),
+  ]);
   const stamps = await getStampCountSince(customer.id, lastClaimAt);
 
   const hasAvailableBirthdayCredit = birthdayCredits.some((c) => c.status === "AVAILABLE");
@@ -173,6 +190,7 @@ async function buildCustomerStatus(customer: User): Promise<CustomerStatus> {
     stamps,
     threshold,
     eligible: stamps >= threshold,
+    stampedToday: !!stampedTodayRow,
     eligibleForInitialGrant: everStampCount === 0 && !pendingGrant,
     pendingGrantRequest: pendingGrant,
     availableReferralCredits,
@@ -211,6 +229,30 @@ export async function searchCustomersAction(
   });
 
   return Promise.all(sortByNameInsensitive(customers).map(buildCustomerStatus));
+}
+
+export type GetCustomerStatusResult =
+  | { ok: true; data: CustomerStatus }
+  | { ok: false; error: string };
+
+/** Read-only lookup — used right after a QR scan to show the customer's
+ * card and let the barista confirm explicitly via "Tambah Stempel", the
+ * same way manual search already works, instead of stamping the instant
+ * the camera decodes a code. */
+export async function getCustomerStatusByIdAction(
+  customerId: string
+): Promise<GetCustomerStatusResult> {
+  await requireBarista();
+
+  const customer = await prisma.user.findUnique({ where: { id: customerId } });
+  if (!customer || customer.role !== "CUSTOMER") {
+    return {
+      ok: false,
+      error: "Pelanggan tidak ditemukan. Pastikan QR valid atau coba cari manual.",
+    };
+  }
+
+  return { ok: true, data: await buildCustomerStatus(customer) };
 }
 
 export type AddStampResult =
@@ -398,7 +440,10 @@ export type RedeemReferralCreditResult =
 
 /** Redeems exactly one credit — the oldest AVAILABLE one (FIFO), no barista
  * choice needed since every credit for a given customer is worth the same
- * snapshotted amount it was earned with. */
+ * snapshotted amount it was earned with. Capped at one redemption per
+ * customer per store-day regardless of how many credits they have stacked
+ * up — otherwise a customer with several AVAILABLE credits could cash them
+ * all in on a single visit. */
 export async function redeemReferralCreditAction(
   customerId: string
 ): Promise<RedeemReferralCreditResult> {
@@ -410,6 +455,17 @@ export async function redeemReferralCreditAction(
   }
   if (!customer.emailVerified) {
     return { ok: false, error: "Pelanggan belum verifikasi email." };
+  }
+
+  const { start, end } = getStoreDayBounds();
+  const redeemedToday = await prisma.referralCredit.findFirst({
+    where: { referrerId: customerId, status: "REDEEMED", redeemedAt: { gte: start, lt: end } },
+  });
+  if (redeemedToday) {
+    return {
+      ok: false,
+      error: `Pelanggan sudah pakai diskon referral hari ini pukul ${formatStoreTime(redeemedToday.redeemedAt!)}.`,
+    };
   }
 
   const credit = await prisma.referralCredit.findFirst({

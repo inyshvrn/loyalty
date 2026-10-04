@@ -75,11 +75,14 @@ export function CustomerStatusCard({
             type="button"
             className="h-11"
             disabled={
-              busy || !status.emailVerified || status.stamps > status.threshold
+              busy ||
+              !status.emailVerified ||
+              status.stamps > status.threshold ||
+              status.stampedToday
             }
             onClick={onAddStamp}
           >
-            Tambah Stempel
+            {status.stampedToday ? "Sudah Distempel Hari Ini" : "Tambah Stempel"}
           </Button>
         </div>
       </div>

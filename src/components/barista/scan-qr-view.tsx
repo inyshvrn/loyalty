@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { QrScanner } from "@/components/barista/qr-scanner";
 import { CustomerStatusCard } from "@/components/barista/customer-status-card";
 import { useCustomerActions } from "@/lib/hooks/use-customer-actions";
-import { addStampAction, type CustomerStatus } from "@/lib/actions/barista";
+import { getCustomerStatusByIdAction, type CustomerStatus } from "@/lib/actions/barista";
 
 export function ScanQrView() {
   const [scanResult, setScanResult] = useState<CustomerStatus | null>(null);
@@ -32,20 +32,13 @@ export function ScanQrView() {
     setScanning(false); // stop the camera immediately so it can't re-fire on the same QR
     setDecoding(true);
     try {
-      const res = await addStampAction(customerId);
+      const res = await getCustomerStatusByIdAction(customerId);
       if (!res.ok) {
         setScanError(res.error);
         toast.error(res.error);
         return;
       }
       setScanResult(res.data);
-      if (res.stampAdded) {
-        toast.success("Stempel ditambahkan", {
-          description: `${res.data.name} · ${res.data.stamps}/${res.data.threshold}`,
-        });
-      } else {
-        toast.info(res.reason, { description: res.data.name });
-      }
     } catch {
       setScanError("Terjadi kesalahan. Coba lagi.");
       toast.error("Terjadi kesalahan. Coba lagi.");
